@@ -21,19 +21,18 @@ def main():
 
 
 	lena_mat, marker_mat = gen_mats()
-	# temp = marker_mat.reshape(80,80,3)
-	# print(temp.shape)
-	# print(temp[2,5])
+	
+
 	# tag_capture = cv2.VideoCapture('Tag0.mp4')
-	tag_capture = cv2.VideoCapture('Tag1.mp4')
+	# tag_capture = cv2.VideoCapture('Tag1.mp4')
 	# tag_capture = cv2.VideoCapture('Tag2.mp4')
-	# tag_capture = cv2.VideoCapture('multipleTags.mp4')
+	tag_capture = cv2.VideoCapture('multipleTags.mp4')
 
 
 
 	while(tag_capture.isOpened()):
 
-		for a in range(10):
+		for a in range(2):
 			ret, frame = tag_capture.read()
 
 		ret, frame = tag_capture.read()
@@ -51,26 +50,28 @@ def main():
 
 		contours = refine_contours(contours)
 		
-		area_bounds = [3000, 22000]
-		final_contours = []
-		final_contour_areas = []
+		# area_bounds = [800, 3000]
+		# final_contours = []
+		# final_contour_areas = []
 		
-		for contour in contours:
-			area = cv2.contourArea(contour)
-			arc_L = cv2.arcLength(contour, True)
-			approx = np.squeeze(cv2.approxPolyDP(contour, arc_L/50.0, True))
-			if area > area_bounds[0] and area < area_bounds[1] and approx.shape[0] == 4: 
-				final_contours.append(approx)
+		# for contour in contours:
+		# 	area = cv2.contourArea(contour)
+		# 	arc_L = cv2.arcLength(contour, True)
+		# 	approx = np.squeeze(cv2.approxPolyDP(contour, arc_L/50.0, True))
+		# 	if area > area_bounds[0] and area < area_bounds[1] and approx.shape[0] == 4: 
+		# 		final_contours.append(approx)
 
 		# if len(final_contours) > 0:
 		# 	final_contours = [final_contours[0]]
 		# print(final_contours)
-		result = tag_image(frame,final_contours,marker_mat.copy())
+		result = tag_image(frame,contours,marker_mat.copy())
+		result = superImpose(result,contours,lena,lena_mat.copy())
+
 
 		# draw = np.zeros(frame.shape,np.uint8)
 		# draw = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 		
-		# result = cv2.drawContours(frame,final_contours,-1,(0,0,255),2)
+		# result = cv2.drawContours(result,contours,-1,(0,0,255),2)
 
 
 		result = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
@@ -78,7 +79,7 @@ def main():
 		cv2.imshow('frame',result)
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
-		break
+		# break
 
 	tag_capture.release()
 	cv2.destroyAllWindows()
@@ -89,13 +90,15 @@ def main():
 	
 def refine_contours(contours):
 
-	area_bounds = [3000, 30000]
+	area_bounds = [1000, 29500]
 	result_contours = []
 	contour_sum = []
+	contour_areas = []
 	sum_threshold = 100
 
 	for contour in contours:
 		area = cv2.contourArea(contour)
+
 		arc_L = cv2.arcLength(contour, True)
 		approx = np.squeeze(cv2.approxPolyDP(contour, arc_L/50.0, True))
 		
@@ -104,10 +107,17 @@ def refine_contours(contours):
 		if area > area_bounds[0] and area < area_bounds[1] and approx.shape[0] == 4 and not closeness:
 			result_contours.append(approx)
 			contour_sum.append(np.sum(approx))
-			# print(approx)
+			contour_areas.append(area)
 
 
- #    rect = np.zeros((4, 2), dtype="float32")
+	# print(result_contours)
+	for contour in result_contours:
+		sum_indx = np.argmax(contour.sum(axis=1))
+		# print(sum_indx)		
+		contour = np.roll(contour, sum_indx)
+	# print(result_contours)
+
+    # rect = np.zeros((4, 2), dtype="float32")
 
 	# sum_indx = contour.sum(axis=1)
 	# # print(contour.shape)
@@ -136,10 +146,10 @@ def gen_mats():
 
 	return np.transpose(np.array(lena_mat)), np.transpose(np.array(marker_mat))
 	
+
 def correct_holes(img,msk):
 
 	pass
-
 
 
 def tag_image(img,contours,marker_matx):
@@ -154,33 +164,27 @@ def tag_image(img,contours,marker_matx):
 		if tag_img is not None:
 			contours_tags.append(contour)
 			tags.append(decode(tag_img))
-		
+	
 	added_frame = add_tag_imgs(img, contours_tags, tags)
 	return added_frame
 
 
 def pull_tag(img,contour_tag,marker_matx):
+
 	draw = np.zeros([80,80,3],np.uint8)
-	x = np.array([1, 100, 100, 1])
-	y = np.array([1, 1, 100, 100])
+	x = np.array([1, 80, 80, 1])
+	y = np.array([1, 1, 80, 80])
 	xp = np.array([contour_tag[0,0], contour_tag[1,0], contour_tag[2,0], contour_tag[3,0]])
 	yp = np.array([contour_tag[0,1], contour_tag[1,1], contour_tag[2,1], contour_tag[3,1]])
 	H = find_homography(x,y,xp,yp)
 
 	xy_new = np.dot(H,marker_matx)
-	print(H)
-	print(xy_new.shape)
 	xy_new = ((xy_new[0:2,:]/xy_new[2,:])).astype(int)
-	print(xy_new)
-	draw[marker_matx[0,:],marker_matx[1,:]] = img[xy_new[0,:],xy_new[1,:]]
+	if (xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any():
+		return None
+	draw[marker_matx[1,:],marker_matx[0,:]] = img[xy_new[1,:],xy_new[0,:]]
 	
-	# for col in range(100):
-	# 	for row in range(100):
-	# 		xy_new = np.dot(H,np.array([col,row,1]))
-	# 		xy_new = np.squeeze(xy_new[0,0:2]/xy_new[0,2])
-	# 		if ((xy_new > [1920, 1080]).any() or (xy_new < 0).any()):
-	# 			return None
-	# 		draw[col,row] = img[int(xy_new[0,1]),int(xy_new[0,0])]
+
 	return draw
 
 
@@ -236,8 +240,8 @@ def decode(marker_image):
 	# th1[44:47,34:37] = 128
 	# th1[44:47,44:47] = 128
 
-	cv2.imshow('marker',th1)
-	cv2.waitKey(1)
+	# cv2.imshow('marker',th1)
+	# cv2.waitKey(1)
 
 
 	# print(tag_ID)
@@ -259,40 +263,26 @@ def add_tag_imgs(img, contours, tags):
 	return img
 
 
-def superImpose(H,src,dest):
+def superImpose(dest,contours,Lena,lena_matx):
 
-	# blank_image = np.zeros(dest.shape, np.uint8)
-	# image_mask = np.zeros((dest.shape[0],dest.shape[1],1), np.uint8)
+	for contour in contours:
 
-	
-	# for col in range(src.shape[0]):
-	# 	for row in range(src.shape[1]):
-	# for col in range(50):
-	# 	for row in range(50):
-	# 		xy_new = np.dot(H,np.array([col,row,1]))
-	# 		xy_new = xy_new[0,0:2]/xy_new[0,2]
-			
-	# 		dest[int(xy_new[0,1]),int(xy_new[0,0])] = src[col,row]
+		x = np.array([1, 512, 512, 1])
+		y = np.array([1, 1, 512, 512])
+		xp = np.array([contour[0,0], contour[1,0], contour[2,0], contour[3,0]])
+		yp = np.array([contour[0,1], contour[1,1], contour[2,1], contour[3,1]])
+		H = find_homography(x,y,xp,yp)
 
-	# for col in range(src.shape[0]):
-		# for row in range(src.shape[1]):
-	for col in range(50):
-		for row in range(50):
-			xy_new = np.dot(H,np.array([col,row,.5]))
-			xy_new = xy_new[0,0:2]/xy_new[0,2]
-			
-			dest[int(xy_new[0,1]),int(xy_new[0,0])] = src[col,row]
-	
-	# warp = cv2.warpPerspective(src, H, (dest.shape[1],dest.shape[0]))
-	# indx = np.where(warp != [0,0,0])
-	# dest[indx] = warp[indx]
+		lena_temp = lena_matx.copy()
+		xy_new = np.dot(H,lena_temp)
+		xy_new = ((xy_new[0:2,:]/xy_new[2,:])).astype(int)
+		if (xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any():
+			return None, None
+		dest[xy_new[1,:],xy_new[0,:]] = Lena[lena_temp[1,:],lena_temp[0,:]]
 
 
-	destR = cv2.resize(dest, (800, 450), interpolation = cv2.INTER_AREA)
-	while True:
-		cv2.imshow('frame',dest)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			break
+	# cv2.imshow('frame',dest)
+	# cv2.waitKey(-1)
 
 	return dest
 
