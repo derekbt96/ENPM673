@@ -4,6 +4,7 @@ import cv2
 # initial generation of matrix filled with tag and lena indices
 # This is done to increase speed of finding warped/unwarped
 # images after while applying homography to these points 
+
 def gen_mats():
     marker_mat = []
     for col in range(80):
@@ -160,6 +161,7 @@ cap = cv2.VideoCapture('Tag0.mp4')
 while(cap.isOpened()):
     ret, frame = cap.read()
     img_orig=cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    
     # Contrast Limited Adaptive Histogram Equalization
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
 

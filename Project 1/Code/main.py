@@ -10,7 +10,6 @@ def main():
 	marker_grid = cv2.imread('ref_marker_grid.png')
 
 
-	# decode(marker)
 
 	
 	K = np.transpose(np.array([[1406.08415449821,0,0],
@@ -21,66 +20,60 @@ def main():
 
 
 	lena_mat, marker_mat = gen_mats()
-	
+	clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+		
 
 	# tag_capture = cv2.VideoCapture('Tag0.mp4')
-	# tag_capture = cv2.VideoCapture('Tag1.mp4')
+	tag_capture = cv2.VideoCapture('Tag1.mp4')
 	# tag_capture = cv2.VideoCapture('Tag2.mp4')
-	tag_capture = cv2.VideoCapture('multipleTags.mp4')
+	# tag_capture = cv2.VideoCapture('multipleTags.mp4')
+	# out = cv2.VideoWriter('multipleTags_tagged.mp4',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (1920,1080))
 
-
+	# for a in range(900):
+			# ret, frame = tag_capture.read()
 
 	while(tag_capture.isOpened()):
 
-		for a in range(2):
-			ret, frame = tag_capture.read()
-
+				
 		ret, frame = tag_capture.read()
 
+		if frame is None:
+			break
 		gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+		gray = clahe.apply(gray)
+	
+
 		ret,th1 = cv2.threshold(gray,190,255,cv2.THRESH_BINARY)
 		kernel = np.ones((3,3),np.uint8)
 		th1 = cv2.erode(th1,kernel,iterations = 1)
-
-		edge = cv2.Canny(th1, 75, 200)
-
+		# edge = cv2.Canny(th1, 75, 200)
 
 
-		contours, hierarchy = cv2.findContours(edge.copy() ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-		contours = refine_contours(contours)
+		contours, hierarchy = cv2.findContours(th1.copy() ,cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+		# contours, hierarchy = cv2.findContours(edge.copy() ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		# frame = cv2.drawContours(frame,contours,-1,(0,0,255),2)
+		contours = refine_contours(contours,hierarchy)
 		
-		# area_bounds = [800, 3000]
-		# final_contours = []
-		# final_contour_areas = []
 		
-		# for contour in contours:
-		# 	area = cv2.contourArea(contour)
-		# 	arc_L = cv2.arcLength(contour, True)
-		# 	approx = np.squeeze(cv2.approxPolyDP(contour, arc_L/50.0, True))
-		# 	if area > area_bounds[0] and area < area_bounds[1] and approx.shape[0] == 4: 
-		# 		final_contours.append(approx)
-
-		# if len(final_contours) > 0:
-		# 	final_contours = [final_contours[0]]
-		# print(final_contours)
-		result = tag_image(frame,contours,marker_mat.copy())
-		result = superImpose(result,contours,lena,lena_mat.copy())
-
-
-		# draw = np.zeros(frame.shape,np.uint8)
-		# draw = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+		if len(contours) > 0:
+			result, contours = tag_image(frame,contours,marker_mat.copy())
+			if len(contours) > 0:
+				result = superImpose(result,contours,lena,lena_mat.copy())
+				# result = cv2.drawContours(result,draw_contours,-1,(0,0,255),2)
+				pass
+		else:
+			result = frame
 		
-		# result = cv2.drawContours(result,contours,-1,(0,0,255),2)
+		# out.write(result)
+		cv2.imwrite('multipleTags_frame.png', result)
 
-
-		result = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
-
-		cv2.imshow('frame',result)
+		result_R = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
+		cv2.imshow('frame',result_R)
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
 		# break
 
+	# out.release()
 	tag_capture.release()
 	cv2.destroyAllWindows()
 
@@ -88,46 +81,59 @@ def main():
 	
 	
 	
-def refine_contours(contours):
+def refine_contours(contours,hierarchy):
 
-	area_bounds = [1000, 29500]
+	area_bounds = [1000, 32000]
 	result_contours = []
-	contour_sum = []
+	contour_sum = np.array([])
 	contour_areas = []
 	sum_threshold = 100
 
-	for contour in contours:
-		area = cv2.contourArea(contour)
-
-		arc_L = cv2.arcLength(contour, True)
-		approx = np.squeeze(cv2.approxPolyDP(contour, arc_L/50.0, True))
+	# print(hierarchy.shape)
+	for contour_indx in range(len(contours)):
+		area = cv2.contourArea(contours[contour_indx])
 		
-		closeness = (np.abs(contour_sum-np.sum(approx)) < sum_threshold).any()
 
-		if area > area_bounds[0] and area < area_bounds[1] and approx.shape[0] == 4 and not closeness:
-			result_contours.append(approx)
-			contour_sum.append(np.sum(approx))
+		arc_L = cv2.arcLength(contours[contour_indx], True)
+		approxps = np.squeeze(cv2.approxPolyDP(contours[contour_indx], arc_L/30.0, True))
+		approx = np.squeeze(approxps)
+		if contour_sum.shape[0] > 0:
+			closeness = (np.abs(contour_sum-np.sum(approx,axis=0)) < sum_threshold).any()
+		else:
+			closeness = False
+
+		if area > area_bounds[0] and area < area_bounds[1] and approx.shape[0] == 4 and not closeness and hierarchy[0,contour_indx,-1] != -1:
+			np.append(contour_sum,np.sum(approx,axis=0))
 			contour_areas.append(area)
 
 
-	# print(result_contours)
-	for contour in result_contours:
-		sum_indx = np.argmax(contour.sum(axis=1))
-		# print(sum_indx)		
-		contour = np.roll(contour, sum_indx)
-	# print(result_contours)
+			# rect = np.zeros((4,2))
+			TL = np.argmin(np.hypot(approx[:,0],approx[:,1]))
+			TR = np.argmin(np.hypot(1920-approx[:,0],approx[:,1]))
+			# BR = np.argmin(np.hypot(1920-approx[:,0],1080-approx[:,1]))
+			# BL = np.argmin(np.hypot(approx[:,0],1080-approx[:,1]))
+			# print(np.hypot(1920-approx[:,0],approx[:,1]))
+			# print([TL,TR,BR,BL])
+			# rect[0,:] = approx[TL,:]
+			# rect[1,:] = approx[TR,:]
+			# rect[2,:] = approx[BR,:]
+			# rect[3,:] = approx[BL,:]
+			# rect = rect.astype(int)
+			# print(approx.shape)
+			# print(rect.shape)
+			# result_contours.append(rect)
+			# print(rect)
 
-    # rect = np.zeros((4, 2), dtype="float32")
-
-	# sum_indx = contour.sum(axis=1)
-	# # print(contour.shape)
-	# rect[0] = contour[np.argmin(sum_indx)]
-	# rect[2] = contour[np.argmax(sum_indx)]
-
-	# diff = np.diff(contour, axis=1)
-	# # print(diff)
-	# rect[1] = contour[np.argmin(diff)]
-	# rect[3] = contour[np.argmax(diff)]
+			# result_contours.append(approx)
+			# dxy = [approx[1,0] - approx[0,0], approx[0,1] - approx[1,1]]
+			# if dxy[np.argmax(np.absolute(dxy))] > 0:
+			if TL < TR and TL != 0:
+				result_contours.append(approx)
+			else:
+				if TL == 0 and TR == 3:
+					result_contours.append(np.flip(approx, 0))
+				else:
+					result_contours.append(approx)
 
 	return result_contours
 
@@ -147,26 +153,30 @@ def gen_mats():
 	return np.transpose(np.array(lena_mat)), np.transpose(np.array(marker_mat))
 	
 
-def correct_holes(img,msk):
-
-	pass
-
-
 def tag_image(img,contours,marker_matx):
 	
 	tags = []
 	contours_tags = []
+	final_contours = []
+	indx_tag = 0
 	for contour in contours:
+	
 		tag_img = pull_tag(img,contour,marker_matx)
 
-		# cv2.imshow('frame',tag_img)
-		# cv2.waitKey(-1)
 		if tag_img is not None:
 			contours_tags.append(contour)
-			tags.append(decode(tag_img))
+			tag_temp, roll = decode(tag_img,indx_tag)
+
+			tags.append(tag_temp)
+			final_contours.append(new_contour)
+			indx_tag += 1
 	
-	added_frame = add_tag_imgs(img, contours_tags, tags)
-	return added_frame
+
+	if len(tags) == 0:
+		return img,None
+	else:
+		added_frame = add_tag_imgs(img, contours_tags, tags)
+		return added_frame, final_contours
 
 
 def pull_tag(img,contour_tag,marker_matx):
@@ -180,72 +190,78 @@ def pull_tag(img,contour_tag,marker_matx):
 
 	xy_new = np.dot(H,marker_matx)
 	xy_new = ((xy_new[0:2,:]/xy_new[2,:])).astype(int)
+
 	if (xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any():
 		return None
 	draw[marker_matx[1,:],marker_matx[0,:]] = img[xy_new[1,:],xy_new[0,:]]
 	
-
 	return draw
 
 
-def decode(marker_image):
+def decode(marker_image,num):
 	marker_img = cv2.resize(marker_image, (80, 80), interpolation = cv2.INTER_AREA)
 	marker_img = cv2.cvtColor(marker_img,cv2.COLOR_BGR2GRAY)
 	# marker_img = cv2.GaussianBlur(marker_img,(3,3),0)
-	ret,th1 = cv2.threshold(marker_img,128,255,cv2.THRESH_BINARY)
+	ret,th_m = cv2.threshold(marker_img,128,255,cv2.THRESH_BINARY)
 	
 	# kernel = np.ones((3,3),np.uint8)
-	# th1 = cv2.erode(th1,kernel,iterations = 1)
+	# th_m = cv2.erode(th_m,kernel,iterations = 1)
 
 	
 
-	orientation_tags = np.array([np.sum(th1[21:26,21:26]),
-						np.sum(th1[21:26,54:59]),
-						np.sum(th1[54:59,21:26]),
-						np.sum(th1[54:59,54:59])])
+	orientation_tags = np.array([np.sum(th_m[21:26,21:26]),
+						np.sum(th_m[21:26,54:59]),
+						np.sum(th_m[54:59,21:26]),
+						np.sum(th_m[54:59,54:59])])
 	# print(orientation_tags)
 
-	data_tags =np.array([np.sum(th1[34:37,34:37])/9.0,
-						np.sum(th1[34:37,44:47])/9.0,
-						np.sum(th1[44:47,34:37])/9.0,
-						np.sum(th1[44:47,44:47])/9.0])
 	# print(data_tags)
-	data_tags = (data_tags > 225).astype(int)
-
-	corner = np.argmax(orientation_tags)
-	if corner == 3:
-		tag_ID = np.array([data_tags[2],data_tags[3],data_tags[1],data_tags[0]])
-		tag_ID = data_tags
-	elif corner == 2:
-		tag_ID = np.array([data_tags[0],data_tags[2],data_tags[3],data_tags[1]])
-		th1 = np.rot90(th1)
-	elif corner == 0:
-		tag_ID = np.array([data_tags[1],data_tags[0],data_tags[2],data_tags[3]])
-		th1 = np.rot90(th1)
-		th1 = np.rot90(th1)
-	elif corner == 1:
-		tag_ID = np.array([data_tags[3],data_tags[1],data_tags[0],data_tags[2]])
-		th1 = np.rot90(th1)
-		th1 = np.rot90(th1)
-		th1 = np.rot90(th1)
 	
+	corner = np.argmax(orientation_tags)
+	if corner == 2:
+		th_m = np.rot90(th_m)
+		roll = 1
+	elif corner == 0:
+		th_m = np.rot90(th_m)
+		th_m = np.rot90(th_m)
+		roll = 2
+	elif corner == 1:
+		th_m = np.rot90(th_m)
+		th_m = np.rot90(th_m)
+		th_m = np.rot90(th_m)
+		roll = 3
+	else:
+		roll = 0
+	
+	# data_tags = np.zeros((4,1))
+	data_tags = np.array([np.sum(th_m[43:48,33:38])/25.0,
+						np.sum(th_m[43:48,43:48])/25.0,
+						np.sum(th_m[33:38,43:48])/25.0,
+						np.sum(th_m[33:38,33:38])/25.0])
+	tag_ID = (data_tags > 254).astype(int)
+	
+	# th_m[0:5,35:45] = 128
+	# th_m[21:26,21:26] = 128
+	# th_m[21:26,54:59] = 128
+	# th_m[54:59,21:26] = 128
+	# th_m[54:59,54:59] = 128
 
-	# th1[21:26,21:26] = 128
-	# th1[21:26,54:59] = 128
-	# th1[54:59,21:26] = 128
-	# th1[54:59,54:59] = 128
+	if tag_ID[0]:
+		th_m[43:48,33:38] = 50
+	if tag_ID[1]:
+		th_m[43:48,43:48] = 50
+	if tag_ID[2]:
+		th_m[33:38,43:48] = 50
+	if tag_ID[3]:
+		th_m[33:38,33:38] = 50
 
-	# th1[34:37,34:37] = 128
-	# th1[34:37,44:47] = 128
-	# th1[44:47,34:37] = 128
-	# th1[44:47,44:47] = 128
-
-	# cv2.imshow('marker',th1)
-	# cv2.waitKey(1)
+	# cv2.imshow('marker'+str(num)+'_1',marker_img)
+	cv2.imshow('marker'+str(num)+'_2',th_m)
+	cv2.waitKey(1)
 
 
 	# print(tag_ID)
-	return tag_ID
+	return tag_ID, roll
 
 
 def add_tag_imgs(img, contours, tags):
@@ -266,7 +282,6 @@ def add_tag_imgs(img, contours, tags):
 def superImpose(dest,contours,Lena,lena_matx):
 
 	for contour in contours:
-
 		x = np.array([1, 512, 512, 1])
 		y = np.array([1, 1, 512, 512])
 		xp = np.array([contour[0,0], contour[1,0], contour[2,0], contour[3,0]])
@@ -276,18 +291,26 @@ def superImpose(dest,contours,Lena,lena_matx):
 		lena_temp = lena_matx.copy()
 		xy_new = np.dot(H,lena_temp)
 		xy_new = ((xy_new[0:2,:]/xy_new[2,:])).astype(int)
-		if (xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any():
-			return None, None
-		dest[xy_new[1,:],xy_new[0,:]] = Lena[lena_temp[1,:],lena_temp[0,:]]
-
-
-	# cv2.imshow('frame',dest)
-	# cv2.waitKey(-1)
+		
+		# print(x)
+		# print(y)
+		# print(xp)
+		# print(yp)
+		# print(H)
+		# print('Contour: ',contour)
+		# print('xy_new: ',xy_new)
+		if not ((xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any()):
+			dest[xy_new[1,:],xy_new[0,:]] = Lena[lena_temp[1,:],lena_temp[0,:]]
+			
+		
 
 	return dest
 
 
 def find_homography(x,y,xp,yp):
+
+
+
 	A = np.matrix([ [-x[0], -y[0], -1, 0, 0, 0, x[0]*xp[0], y[0]*xp[0], xp[0]],
 					[0, 0, 0, -x[0], -y[0], -1, x[0]*yp[0], y[0]*yp[0], yp[0]],
 					[-x[1], -y[1], -1, 0, 0, 0, x[1]*xp[1], y[1]*xp[1], xp[1]],
@@ -295,16 +318,18 @@ def find_homography(x,y,xp,yp):
 					[-x[2], -y[2], -1, 0, 0, 0, x[2]*xp[2], y[2]*xp[2], xp[2]],
 					[0, 0, 0, -x[2], -y[2], -1, x[2]*yp[2], y[2]*yp[2], yp[2]],
 					[-x[3], -y[3], -1, 0, 0, 0, x[3]*xp[3], y[3]*xp[3], xp[3]],
-					[0, 0, 0, -x[3], -y[3], -1, x[3]*yp[3], y[3]*yp[3], yp[3]] ])
+					[0, 0, 0, -x[3], -y[3], -1, x[3]*yp[3], y[3]*yp[3], yp[3]]])
 
-	evl_AtA, V = np.linalg.eig(np.dot(np.transpose(A),A))
+	# evl_AtA, V = np.linalg.eig(np.dot(np.transpose(A),A))
+	# u, s, V = np.linalg.svd(A, full_matrices=True)
+	# H = np.reshape(V[:,-1],[3,3])
+	
 
-	H = np.reshape(V[:,-1],[3,3])
+	U, S, Vh = np.linalg.svd(A)
+	l = Vh[-1, :] / Vh[-1, -1]
+	H = np.reshape(l, (3, 3))
 
-	# Z = np.dot(A,H)
-	# print(Z)
-	# print(Hs)
-
+	
 	return H
 
 
