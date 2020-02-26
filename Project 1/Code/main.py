@@ -23,18 +23,22 @@ def main():
 	clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
 		
 
-	# tag_capture = cv2.VideoCapture('Tag0.mp4')
-	tag_capture = cv2.VideoCapture('Tag1.mp4')
+	tag_capture = cv2.VideoCapture('Tag0.mp4')
+	# tag_capture = cv2.VideoCapture('Tag1.mp4')
 	# tag_capture = cv2.VideoCapture('Tag2.mp4')
 	# tag_capture = cv2.VideoCapture('multipleTags.mp4')
-	# out = cv2.VideoWriter('multipleTags_tagged.mp4',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (1920,1080))
+	# out = cv2.VideoWriter('multipleTags_tagged.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (1920,1080))
+	# out = cv2.VideoWriter('Tag0_tagged.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (1920,1080))
 
-	# for a in range(900):
-			# ret, frame = tag_capture.read()
+	for a in range(100):
+			ret, frame = tag_capture.read()
 
 	while(tag_capture.isOpened()):
 
-				
+		
+		# for i in range(10):
+		# 	ret, frame = tag_capture.read()
+	
 		ret, frame = tag_capture.read()
 
 		if frame is None:
@@ -56,22 +60,22 @@ def main():
 		
 		
 		if len(contours) > 0:
-			result, contours = tag_image(frame,contours,marker_mat.copy())
-			if len(contours) > 0:
-				result = superImpose(result,contours,lena,lena_mat.copy())
+			result, new_contours = tag_image(frame,contours,marker_mat.copy())
+			if len(new_contours) > 0:
+				result = superImpose(result,new_contours,lena,lena_mat.copy())
 				# result = cv2.drawContours(result,draw_contours,-1,(0,0,255),2)
 				pass
 		else:
 			result = frame
 		
 		# out.write(result)
-		cv2.imwrite('multipleTags_frame.png', result)
+		# cv2.imwrite('multipleTags_frame.png', result)
 
 		result_R = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
-		cv2.imshow('frame',result_R)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			break
-		# break
+		# cv2.imshow('frame',result_R)
+		# if cv2.waitKey(1) & 0xFF == ord('q'):
+			# break
+		break
 
 	# out.release()
 	tag_capture.release()
@@ -168,7 +172,8 @@ def tag_image(img,contours,marker_matx):
 			tag_temp, roll = decode(tag_img,indx_tag)
 
 			tags.append(tag_temp)
-			final_contours.append(new_contour)
+
+			final_contours.append(np.roll(contour,-roll,axis=0))
 			indx_tag += 1
 	
 
@@ -246,18 +251,19 @@ def decode(marker_image,num):
 	# th_m[54:59,21:26] = 128
 	# th_m[54:59,54:59] = 128
 
-	if tag_ID[0]:
-		th_m[43:48,33:38] = 50
-	if tag_ID[1]:
-		th_m[43:48,43:48] = 50
-	if tag_ID[2]:
-		th_m[33:38,43:48] = 50
-	if tag_ID[3]:
-		th_m[33:38,33:38] = 50
+	# if tag_ID[0]:
+	# 	th_m[43:48,33:38] = 50
+	# if tag_ID[1]:
+	# 	th_m[43:48,43:48] = 50
+	# if tag_ID[2]:
+	# 	th_m[33:38,43:48] = 50
+	# if tag_ID[3]:
+	# 	th_m[33:38,33:38] = 50
 
 	# cv2.imshow('marker'+str(num)+'_1',marker_img)
-	cv2.imshow('marker'+str(num)+'_2',th_m)
-	cv2.waitKey(1)
+	# cv2.imshow('marker'+str(num)+'_2',th_m)
+	# cv2.waitKey(1)
+	cv2.imwrite('single_tag.png', th_m)
 
 
 	# print(tag_ID)
@@ -290,15 +296,8 @@ def superImpose(dest,contours,Lena,lena_matx):
 
 		lena_temp = lena_matx.copy()
 		xy_new = np.dot(H,lena_temp)
-		xy_new = ((xy_new[0:2,:]/xy_new[2,:])).astype(int)
-		
-		# print(x)
-		# print(y)
-		# print(xp)
-		# print(yp)
-		# print(H)
-		# print('Contour: ',contour)
-		# print('xy_new: ',xy_new)
+		xy_new = (xy_new[0:2,:]/xy_new[2,:]).astype(int)
+
 		if not ((xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any()):
 			dest[xy_new[1,:],xy_new[0,:]] = Lena[lena_temp[1,:],lena_temp[0,:]]
 			
