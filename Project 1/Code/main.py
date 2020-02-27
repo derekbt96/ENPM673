@@ -12,32 +12,32 @@ def main():
 
 
 	
-	K = np.transpose(np.array([[1406.08415449821,0,0],
-	[2.20679787308599, 1417.99930662800,0],
-	[1014.13643417416, 566.347754321696,1]]))
+	# K = np.transpose(np.array([[1406.08415449821,0,0],
+	# [2.20679787308599, 1417.99930662800,0],
+	# [1014.13643417416, 566.347754321696,1]]))
 	
 	lena = cv2.imread('Lena.png')
-
 
 	lena_mat, marker_mat = gen_mats()
 	clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
 		
 
-	tag_capture = cv2.VideoCapture('Tag0.mp4')
+	# UNCOMMENT VIDEO THAT NEEDS TO BE PLAYED
+	# tag_capture = cv2.VideoCapture('Tag0.mp4')
 	# tag_capture = cv2.VideoCapture('Tag1.mp4')
 	# tag_capture = cv2.VideoCapture('Tag2.mp4')
-	# tag_capture = cv2.VideoCapture('multipleTags.mp4')
-	# out = cv2.VideoWriter('multipleTags_tagged.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (1920,1080))
-	# out = cv2.VideoWriter('Tag0_tagged.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (1920,1080))
+	tag_capture = cv2.VideoCapture('multipleTags.mp4')
 
-	for a in range(100):
-			ret, frame = tag_capture.read()
 
+	# SET VALUES ACCORDING TO IF YOU WANT TO SEE CUBE OR ENCODING/LENA
+	cube = True
+	encoding = True
+	lena_tag = True
+
+	
+	# out = cv2.VideoWriter('Tag_multiple_cubed.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (1920,1080))
 	while(tag_capture.isOpened()):
 
-		
-		# for i in range(10):
-		# 	ret, frame = tag_capture.read()
 	
 		ret, frame = tag_capture.read()
 
@@ -59,30 +59,50 @@ def main():
 		contours = refine_contours(contours,hierarchy)
 		
 		
+		result = frame
 		if len(contours) > 0:
-			result, new_contours = tag_image(frame,contours,marker_mat.copy())
-			if len(new_contours) > 0:
-				result = superImpose(result,new_contours,lena,lena_mat.copy())
-				# result = cv2.drawContours(result,draw_contours,-1,(0,0,255),2)
-				pass
-		else:
-			result = frame
+			
+			if encoding:
+				result, new_contours = tag_image(result,contours,marker_mat.copy())
+				if len(new_contours) > 0 and lena_tag:
+					result = superImpose(result,new_contours,lena,lena_mat.copy())
+			elif lena_tag and not encoding:
+				temp, new_contours = tag_image(result.copy(),contours,marker_mat.copy())
+				if len(new_contours) > 0:
+					result = superImpose(frame,new_contours,lena,lena_mat.copy())
+
+			if cube:
+				result = tag_cube(result,contours,marker_mat)
+
 		
 		# out.write(result)
-		# cv2.imwrite('multipleTags_frame.png', result)
+		# cv2.imwrite('cube_frame.png', result)
 
 		result_R = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
-		# cv2.imshow('frame',result_R)
-		# if cv2.waitKey(1) & 0xFF == ord('q'):
-			# break
-		break
+		cv2.imshow('frame',result_R)
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
+		# break
 
 	# out.release()
 	tag_capture.release()
 	cv2.destroyAllWindows()
 
 	
-	
+
+def gen_mats():
+	marker_mat = []
+	for col in range(80):
+		for row in range(80):
+			marker_mat.append([col,row,1])
+
+
+	lena_mat = []
+	for col in range(512):
+		for row in range(512):
+			lena_mat.append([col,row,1])
+
+	return np.transpose(np.array(lena_mat)), np.transpose(np.array(marker_mat))
 	
 	
 def refine_contours(contours,hierarchy):
@@ -142,20 +162,96 @@ def refine_contours(contours,hierarchy):
 	return result_contours
 
 
-def gen_mats():
-	marker_mat = []
-	for col in range(80):
-		for row in range(80):
-			marker_mat.append([col,row,1])
-
-
-	lena_mat = []
-	for col in range(512):
-		for row in range(512):
-			lena_mat.append([col,row,1])
-
-	return np.transpose(np.array(lena_mat)), np.transpose(np.array(marker_mat))
+def pose(H):
+	# Intrinsics
+	K = np.transpose(np.array([[1406.08415449821,0,0],
+		[2.20679787308599, 1417.99930662800,0],
+		[1014.13643417416, 566.347754321696,1]]))
 	
+	K_inv = np.linalg.inv(K).astype(float)
+	# print(K_inv)
+	h1 = H[:,0]
+	h2 = H[:,1]
+
+	lamda = 2/(np.linalg.norm(np.matmul(K_inv, h1)) + np.linalg.norm(np.matmul(K_inv, h2)))
+	# lamda = 1
+	# print(lamda)
+	# Bcap = np.dot(inv(K), H)
+
+	B = lamda*np.matmul(K_inv, H)
+
+	if (np.linalg.det(B) < 0):
+		B = -1*B
+	# print(norm(B[:,0]))
+	# print(np.rint(np.linalg.det(B)))
+	b1 = B[:,0]
+	b2 = B[:,1]
+	b3 = B[:,2]
+
+	r1 = b1
+	r2 = b2
+
+	r3 = np.cross(np.transpose(r1), np.transpose(r2)).reshape(3,1)
+	# print(r1)
+	# print(r2)
+	# print(r3)
+	t  = lamda*b3
+	# print(t)
+	P = np.dot(K,np.concatenate((lamda*r1, lamda*r2, lamda*r3, t), axis=1))
+
+	# P=P/P[2,3]
+	# print(P)
+	# print(lamda)
+	# print(H)
+	return P
+
+
+def tag_cube(img,contours,marker_matx):
+	
+	tags = []
+	contours_tags = []
+	for contour in contours:
+
+		tag_img, H = pull_tag(img,contour,marker_matx)
+
+		P = pose(H)
+		val = 80
+		axis_ = np.transpose(np.float32(
+		[[1, 0, 0, 1], [1, val, 0, 1], [val, val, 0, 1], 
+		[val, 0, 0, 1], [1, 0, -val, 1], [1, val, -val, 1], 
+		[val, val, -val, 1], [val, 0, -val, 1]]))
+		new_points = np.dot(P.copy(),axis_)
+		new_points = (new_points[0:2,:]/new_points[2,:]).astype(int)
+		# print(new_points)
+		cv2.line(img, (new_points[0,0], new_points[1,0]), 
+			(new_points[0,1], new_points[1,1]), (0,255,0),3)
+		cv2.line(img, (new_points[0,1], new_points[1,1]), 
+			(new_points[0,2], new_points[1,2]), (0,255,0),3)
+		cv2.line(img, (new_points[0,2], new_points[1,2]), 
+			(new_points[0,3], new_points[1,3]), (0,255,0),3)
+		cv2.line(img, (new_points[0,3], new_points[1,3]), 
+			(new_points[0,0], new_points[1,0]), (0,255,0),3)
+
+		cv2.line(img, (new_points[0,4], new_points[1,4]), 
+			(new_points[0,5], new_points[1,5]), (0,255,0),3)
+		cv2.line(img, (new_points[0,5], new_points[1,5]), 
+			(new_points[0,6], new_points[1,6]), (0,255,0),3)
+		cv2.line(img, (new_points[0,6], new_points[1,6]), 
+			(new_points[0,7], new_points[1,7]), (0,255,0),3)
+		cv2.line(img, (new_points[0,7], new_points[1,7]), 
+			(new_points[0,4], new_points[1,4]), (0,255,0),3)
+
+		cv2.line(img, (new_points[0,0], new_points[1,0]), 
+			(new_points[0,4], new_points[1,4]), (0,255,0),3)
+
+		cv2.line(img, (new_points[0,1], new_points[1,1]), 
+			(new_points[0,5], new_points[1,5]), (0,255,0),3)
+		cv2.line(img, (new_points[0,2], new_points[1,2]), 
+			(new_points[0,6], new_points[1,6]), (0,255,0),3)
+		cv2.line(img, (new_points[0,3], new_points[1,3]), 
+			(new_points[0,7], new_points[1,7]), (0,255,0),3)
+	return img
+
 
 def tag_image(img,contours,marker_matx):
 	
@@ -165,7 +261,7 @@ def tag_image(img,contours,marker_matx):
 	indx_tag = 0
 	for contour in contours:
 	
-		tag_img = pull_tag(img,contour,marker_matx)
+		tag_img,H = pull_tag(img,contour,marker_matx)
 
 		if tag_img is not None:
 			contours_tags.append(contour)
@@ -197,17 +293,17 @@ def pull_tag(img,contour_tag,marker_matx):
 	xy_new = ((xy_new[0:2,:]/xy_new[2,:])).astype(int)
 
 	if (xy_new < 0).any() or (xy_new[0,:] > 1920).any() or (xy_new[1,:] > 1080).any():
-		return None
+		return None, H
 	draw[marker_matx[1,:],marker_matx[0,:]] = img[xy_new[1,:],xy_new[0,:]]
 	
-	return draw
+	return draw, H
 
 
 def decode(marker_image,num):
 	marker_img = cv2.resize(marker_image, (80, 80), interpolation = cv2.INTER_AREA)
 	marker_img = cv2.cvtColor(marker_img,cv2.COLOR_BGR2GRAY)
 	# marker_img = cv2.GaussianBlur(marker_img,(3,3),0)
-	ret,th_m = cv2.threshold(marker_img,128,255,cv2.THRESH_BINARY)
+	ret,th_m = cv2.threshold(marker_img,200,255,cv2.THRESH_BINARY)
 	
 	# kernel = np.ones((3,3),np.uint8)
 	# th_m = cv2.erode(th_m,kernel,iterations = 1)
@@ -261,9 +357,9 @@ def decode(marker_image,num):
 	# 	th_m[33:38,33:38] = 50
 
 	# cv2.imshow('marker'+str(num)+'_1',marker_img)
-	# cv2.imshow('marker'+str(num)+'_2',th_m)
+	cv2.imshow('marker_'+str(num),th_m)
 	# cv2.waitKey(1)
-	cv2.imwrite('single_tag.png', th_m)
+	# cv2.imwrite('single_tag.png', th_m)
 
 
 	# print(tag_ID)
