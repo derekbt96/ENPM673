@@ -21,10 +21,13 @@ def main():
         ret, original = cap.read()
             
         corrected = gamma_correct(original, gamma)
-        corrected = cv2.GaussianBlur(corrected,(3,3),0)
+        corrected = cv2.GaussianBlur(corrected,(5,5),0)
+        # corrected = cv2.fastNlMeansDenoisingColored(corrected,None,5,5,7,11)
 
         cv2.namedWindow('image',cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('image', 600,600)
+        cv2.resizeWindow('image', 900,600)
         cv2.imshow('image', np.hstack([original, corrected]))
-        cv2.waitKey(1)
+        # cv2.waitKey(1)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 main()
