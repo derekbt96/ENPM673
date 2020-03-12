@@ -13,7 +13,6 @@ newcameramtx_2images, roi = cv2.getOptimalNewCameraMatrix(K_images,dist_images,(
 part = 3
 
 def main():
-	
 
 	if part == 1:
 		capture = cv2.VideoCapture('Night Drive - 2689.mp4')
@@ -24,37 +23,48 @@ def main():
 		capture = cv2.VideoCapture('data_2/challenge_video.mp4')
 		detector = Lane_detector_video()
 	
-	while(capture.isOpened()):
+	# out = cv2.VideoWriter('final_road.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (640,480))
+	# i = 0
+
+	while(True):
 
 	
 		ret, frame = capture.read()
-		if frame is None:
-			break
+		# if frame is None:
+		# 	break
 		
-		# 1
-		# result_first = improve_img(frame)
-		# result2 = cv2.medianBlur(result, 5)
+		if ret == True:
+			# 1
+			# result_first = improve_img(frame)
+			# result2 = cv2.medianBlur(result, 5)
+			# out.write(frame)
 
+			# 2
+			result = detector.spin(frame)
+			result2 = detector.road_fin
+			result3 = detector.lane_mask
+			
+			# print("Turn is {}".format(np.sign(detector.final_turn)))
+			# print("Right slope is {}".format(detector.slope_right))
+			# result = part2(frame)
 
-		# 2
-		result = detector.spin(frame)
-		result2 = detector.road_fin
-		result3 = detector.lane_mask
-		
-		# print("Turn is {}".format(np.sign(detector.final_turn)))
-		# print("Right slope is {}".format(detector.slope_right))
-		# result = part2(frame)
+			# result = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
+			# frame = cv2.resize(frame, (800, 450), interpolation = cv2.INTER_AREA)
+			cv2.imshow('frame',result)
+			cv2.imshow('result2',result2)
+			if cv2.waitKey(1) & 0xFF == ord('q'):
+				break
 
-		# result = cv2.resize(result, (800, 450), interpolation = cv2.INTER_AREA)
-		# frame = cv2.resize(frame, (800, 450), interpolation = cv2.INTER_AREA)
-		# cv2.imshow('frame',frame)
-		cv2.imshow('result',result)
-		# cv2.imshow('result2',result_first)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
+			# cv2.imwrite("./video/{}.png".format(i),result)
+			# i = i+1
+
+		# if ret == False:
+		else:
 			break
-
 	capture.release()
 	cv2.destroyAllWindows()
+		# out.write(frame)
+		# cv2.imshow('result',result)
 
 
 
