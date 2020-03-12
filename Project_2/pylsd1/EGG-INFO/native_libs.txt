@@ -1,0 +1,3 @@
+pylsd/lib/darwin/liblsd.dylib
+pylsd/lib/linux/liblsd.so
+pylsd/lib/win32/x64/lsd.dll
