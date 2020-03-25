@@ -17,8 +17,7 @@ while hasFrame(vid)
     frame = readFrame(vid);
     frame_indx = frame_indx+1
     if frame_indx > 135
-        wnd = 40;
-    end
+        
     imshow(frame);
     mask = zeros(480,640,3);
     
