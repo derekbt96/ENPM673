@@ -2,24 +2,13 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-'''
-cd Documents/Documents/Aerospace/ENPM673/ENPM673/Project_2
-'''
-
-
-K_images =  np.array([[  1.15422732e+03,   0.00000000e+00,   6.71627794e+02],
-				[  0.00000000e+00,   1.14818221e+03,   3.86046312e+02],
-				[  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
-dist_images = np.array([ -2.42565104e-01,  -4.77893070e-02,  -1.31388084e-03,  -8.79107779e-05,    2.20573263e-02])
-
-newcameramtx_2images, roi = cv2.getOptimalNewCameraMatrix(K_images,dist_images,(1392,512),1, (1392,512))
 
 
 # CHANGE THE VARIABLE BELOW TO THE DESIRED OUTPUT PROBLEM
 # PROBLEM 1 = 1
 # PROBLEM 2 image dataset = 2
 # PROBLEM 2 challenge_video = 3
-problem = 2
+problem = 3
 
 
 def main():
@@ -47,7 +36,7 @@ def main():
 		detector = Lane_detector_video()
 	
 
-
+	# out = cv2.VideoWriter('road_video.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (800,800))
 	while(True):
 
 	
@@ -57,8 +46,8 @@ def main():
 				break
 
 			look_frame = part1(frame)
-			result = cv2.resize(frame, (800, 450), interpolation = cv2.INTER_AREA)
-			result2 = cv2.resize(look_frame, (800, 450), interpolation = cv2.INTER_AREA)
+			result = cv2.resize(look_frame, (1280, 720), interpolation = cv2.INTER_AREA)
+			result2 = cv2.resize(look_frame, (1280, 720), interpolation = cv2.INTER_AREA)
 
 		elif problem == 2:
 
@@ -66,7 +55,7 @@ def main():
 
 			result = detector.spin(frame)
 			result2 = detector.road
-
+			
 			img_indx += 1
 			if img_indx == 304:
 				break
@@ -79,15 +68,17 @@ def main():
 
 			result = detector.spin(frame)
 			result2 = detector.road
+			# result2 = np.hstack([detector.road, cv2.merge([detector.lane_mask,detector.lane_mask,detector.lane_mask])])
 		
 
-
-
+		# result2 = cv2.resize(result2, (800, 800), interpolation = cv2.INTER_AREA)
+		# out.write(result2)
 		cv2.imshow('result',result)
-		# cv2.imshow('result2',result2)
+		cv2.imshow('result2',result2)
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
 
+	out.release()
 	capture.release()
 	cv2.destroyAllWindows()
 
@@ -117,7 +108,7 @@ class Lane_detector_video:
 		self.lane_pnts = np.array([[lane_center[0]-lane_width[0],lane_height[0]],[lane_center[1]-lane_width[1],lane_height[1]],[lane_center[1]+lane_width[1],lane_height[1]],[lane_center[0]+lane_width[0],lane_height[0]]])
 		self.current_lane = np.array([[700,470],[630,470],[300,690],[1050,690]])
 
-		print(self.current_lane.shape)
+		# print(self.current_lane.shape)
 		self.h = 400
 		self.w = 180
 		self.dst_pts = np.array([[1,1],[1,self.h],[self.w,self.h],[self.w, 1]])
@@ -133,7 +124,7 @@ class Lane_detector_video:
 		self.get_lane_points(img.copy())
 
 
-		print(round(self.turn,2),' ',round(self.turn_R,2),' ',round(self.turn_L,2))
+		# print(round(self.turn,2),' ',round(self.turn_R,2),' ',round(self.turn_L,2))
 
 		
 		return self.color_lane(img)
@@ -204,8 +195,10 @@ class Lane_detector_video:
 			dist_thres = 40
 			left_lines = lines[(np.abs(rotated_X - left_lane_pnt[0]) < dist_thres),:]
 			right_lines = lines[(np.abs(rotated_X - right_lane_pnt[0]) < dist_thres),:]
-
+			# print(left_lines[:,1])
+			
 			if left_lines.shape[0] > 0:
+				temp = np.zeros((left_lines.shape[0],4))
 				for indx in range(left_lines.shape[0]):
 					theta = left_lines[indx,1]
 					rho = left_lines[indx,0]
@@ -217,8 +210,14 @@ class Lane_detector_video:
 					y1 = int(y0 + 1000*(a))
 					x2 = int(x0 - 1000*(-b))
 					y2 = int(y0 - 1000*(a))
-					cv2.line(road_og,(x1,y1),(x2,y2),(0,0,255),1)
-				
+					temp[indx,0] = x1
+					temp[indx,1] = y1
+					temp[indx,2] = x2
+					temp[indx,3] = y2
+					
+					# cv2.line(road_og,(x1,y1),(x2,y2),(0,0,255),1)
+				cv2.line(road_og,(int(np.average(temp[:,0])),int(np.average(temp[:,1]))),(int(np.average(temp[:,2])),int(np.average(temp[:,3]))),(0,0,255),3)
+
 				left_lines[left_lines > .5*np.pi] = left_lines[left_lines > .5*np.pi]-np.pi
 				self.turn_L = self.turn_L*.75 + .25*np.average(left_lines[:,1])
 
@@ -230,6 +229,9 @@ class Lane_detector_video:
 
 
 			if right_lines.shape[0] > 0:
+
+				temp = np.zeros((right_lines.shape[0],4))
+
 				for indx in range(right_lines.shape[0]):
 					theta = right_lines[indx,1]
 					rho = right_lines[indx,0]
@@ -241,8 +243,14 @@ class Lane_detector_video:
 					y1 = int(y0 + 1000*(a))
 					x2 = int(x0 - 1000*(-b))
 					y2 = int(y0 - 1000*(a))
-					cv2.line(road_og,(x1,y1),(x2,y2),(255,0,0),1)
-			
+					temp[indx,0] = x1
+					temp[indx,1] = y1
+					temp[indx,2] = x2
+					temp[indx,3] = y2
+					# cv2.line(road_og,(x1,y1),(x2,y2),(255,0,0),1)
+
+				cv2.line(road_og,(int(np.average(temp[:,0])),int(np.average(temp[:,1]))),(int(np.average(temp[:,2])),int(np.average(temp[:,3]))),(255,0,0),3)
+				
 				right_lines[right_lines > .5*np.pi] = right_lines[right_lines > .5*np.pi]-np.pi
 				self.turn_R = self.turn_R*.5 + .5*np.average(right_lines[:,1])
 
@@ -312,7 +320,7 @@ class Lane_detector_images:
 		self.current_lane = np.array([[700,325],[630,325],[285,500],[835,500]])
 		# self.current_lane = self.lane_pnts
 
-		print(self.current_lane.shape)
+		# print(self.current_lane.shape)
 		self.h = 400
 		self.w = 180
 		self.dst_pts = np.array([[1,1],[1,self.h],[self.w,self.h],[self.w, 1]])
@@ -328,7 +336,7 @@ class Lane_detector_images:
 		self.get_lane_points(img.copy())
 
 
-		print(round(self.turn,2),' ',round(self.turn_R,2),' ',round(self.turn_L,2))
+		# print(round(self.turn,2),' ',round(self.turn_R,2),' ',round(self.turn_L,2))
 
 		# return self.road
 		return self.color_lane(img)
