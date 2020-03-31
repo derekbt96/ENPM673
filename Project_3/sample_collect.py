@@ -1,3 +1,5 @@
+# segments out the pixels of interest within the bounding box you choose; 
+# Note: Pl choose the roi such that it mostly encompasses the buoys else you might get bad circles!
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
@@ -63,8 +65,8 @@ for sample in samples:
 	
 	image = sampleImg.copy()
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	cv2.imshow("gray", gray)
-	cv2.waitKey(1000)
+# 	cv2.imshow("gray", gray)
+# 	cv2.waitKey(1000)
 	detected_circles = cv2.HoughCircles(gray,  
 		cv2.HOUGH_GRADIENT, 1, 5, param1 = 50, 
 		param2 = 15, minRadius = 10, maxRadius = 200) 
@@ -81,7 +83,7 @@ for sample in samples:
 		a, b, r = detected_circles[0, 0, 0], detected_circles[0, 0, 1], detected_circles[0, 0, 2]             
 		# Draw the circumference of the circle. 
 		cv2.circle(sampleImg, (a, b), r, (0, 255, 0), 2) 
-  	cv2.imshow("sampleImg", sampleImg) 
+  		cv2.imshow("sampleImg", sampleImg) 
 		cv2.waitKey(1000) 
 
 		windw = sampleImg.copy()
@@ -90,9 +92,6 @@ for sample in samples:
 		for y in range (h):
 			for x in range (w):
 				if (np.sqrt(np.square(x-a) +np.square(y-a)) < r):
-
-
-					# Convert the RGB values to 1D arrays for processing
 					B = np.append(B,windw[y,x,0])
 					G = np.append(G,windw[y,x,1])
 					R = np.append(R,windw[y,x,2])
