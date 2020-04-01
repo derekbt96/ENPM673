@@ -75,7 +75,7 @@ for sample in samples:
 	
 	# Draw circles that are detected. 
 	if detected_circles is not None: 
-  	# print('circle!!')
+	# print('circle!!')
 		# Convert the circle parameters a, b and r to integers. 
 		detected_circles = np.uint16(np.around(detected_circles)) 
 		
@@ -83,7 +83,7 @@ for sample in samples:
 		a, b, r = detected_circles[0, 0, 0], detected_circles[0, 0, 1], detected_circles[0, 0, 2]             
 		# Draw the circumference of the circle. 
 		cv2.circle(sampleImg, (a, b), r, (0, 255, 0), 2) 
-  		cv2.imshow("sampleImg", sampleImg) 
+		cv2.imshow("sampleImg", sampleImg) 
 		cv2.waitKey(1000) 
 
 		windw = sampleImg.copy()

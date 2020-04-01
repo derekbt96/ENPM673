@@ -21,12 +21,13 @@ def main():
 
 		# color_seg.spin(frame)
 		
+		result = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
 
-		result = cv2.resize(frame, (800, 400), interpolation = cv2.INTER_AREA)
+		# result = cv2.resize(frame, (800, 400), interpolation = cv2.INTER_AREA)
 		# out.write(result2)
 		cv2.imshow('result',result)
 		# cv2.imshow('result2',result2)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
+		if cv2.waitKey(20) & 0xFF == ord('q'):
 			break
 
 	out.release()
