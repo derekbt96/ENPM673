@@ -1,7 +1,7 @@
 import numpy as np 
 import cv2
 from matplotlib import pyplot as plt
-
+from functions import color_mask, color_data
 
 
 
@@ -18,7 +18,7 @@ def main():
 		ret, frame = capture.read()
 		if frame is None:
 			break
-
+		
 		# color_seg.spin(frame)
 		
 		result = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
