@@ -2,7 +2,8 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 from functions import color_mask, color_data
-
+import scipy
+from scipy import io 
 
 
 def main():
@@ -10,27 +11,31 @@ def main():
 	capture = cv2.VideoCapture('detectbuoy.avi')
 
 	color_seg = gmm()
+	masker = color_mask()
+
 
 	# out = cv2.VideoWriter('road_video.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (800,800))
+	frame_indx = -1
 	while(True):
 
-	
+		frame_indx += 1
 		ret, frame = capture.read()
 		if frame is None:
 			break
 		
-		# color_seg.spin(frame)
-		
-		result = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+		print(frame.shape)
 
+		result = masker.get_mask_point(frame,frame_indx)
+
+		
 		# result = cv2.resize(frame, (800, 400), interpolation = cv2.INTER_AREA)
 		# out.write(result2)
 		cv2.imshow('result',result)
-		# cv2.imshow('result2',result2)
-		if cv2.waitKey(20) & 0xFF == ord('q'):
+		# break
+		if cv2.waitKey(50) & 0xFF == ord('q'):
 			break
 
-	out.release()
+	# out.release()
 	capture.release()
 	cv2.destroyAllWindows()
 
@@ -55,3 +60,8 @@ class gmm:
 		
 
 main()
+
+# temp = scipy.io.loadmat('vid_points.mat')
+# temp = np.array(temp['image_points'])
+# print(temp)
+# np.save('buoy_points',temp)

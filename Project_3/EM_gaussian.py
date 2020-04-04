@@ -23,7 +23,7 @@ def main():
 
 
 	fig = plt.figure()
-	plt.hist(dat, bins=256, range=(-5, 15), fc='b', ec='b')
+	plt.hist(dat, bins=100, range=(-5, 15), fc='b', ec='b')
 	plt.show()
 
 	

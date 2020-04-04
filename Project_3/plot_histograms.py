@@ -21,7 +21,7 @@ def main():
 	capture.release()
 	mask_gen.cap.release()
 	
-
+	
 	fig = plt.figure()
 	plt.subplot(411)
 	plt.hist(color_seg1[:,0], bins=256, range=(0.0, 255.0), fc='b', ec='b')
