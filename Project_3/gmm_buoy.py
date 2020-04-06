@@ -126,7 +126,7 @@ class GMM:
             
             e_vals, e_vecs = np.linalg.eig(c) # val, vecs
             radii = np.sqrt(e_vals)
-            rotation = c 
+            rotation = e_vecs 
             center = m 
             self.plot_ellipsoid_3d(center, radii, rotation, ax0)
 
