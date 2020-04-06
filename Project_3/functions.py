@@ -2,25 +2,26 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d, Axes3D  
-
+from scipy.stats import multivariate_normal
 
 
 class color_data:
     def __init__(self):
-        if False:
+        if True:
             self.train1 = np.load('color_data/training_buoy1_data.npy')
-            self.train2 = np.load('color_data/training_buoy2_data.npy')
-            self.train3 = np.load('color_data/training_buoy3_data.npy')
-            self.test1 = np.load('color_data/testing_buoy1_data.npy')
-            self.test2 = np.load('color_data/testing_buoy2_data.npy')
-            self.test3 = np.load('color_data/testing_buoy3_data.npy')
         else:
             self.train1 = np.load('color_data/training_buoy1_data_HSV.npy')
+            
+        if False:
+            self.train2 = np.load('color_data/training_buoy2_data.npy')
+        else:
             self.train2 = np.load('color_data/training_buoy2_data_HSV.npy')
+            
+        if False:
+            self.train3 = np.load('color_data/training_buoy3_data.npy')
+        else:
             self.train3 = np.load('color_data/training_buoy3_data_HSV.npy')
-            self.test1 = np.load('color_data/testing_buoy1_data_HSV.npy')
-            self.test2 = np.load('color_data/testing_buoy2_data_HSV.npy')
-            self.test3 = np.load('color_data/testing_buoy3_data_HSV.npy')
+            
 
     
     def plot_data(self,color_data):
@@ -54,15 +55,15 @@ class color_mask:
         self.buoy_pnts = np.load('buoy_points.npy')
         self.thres = [127,255]
         self.kernel3 = np.ones((3,3),np.uint8)
-        self.kernel5 = np.ones((9,9),np.uint8)
-        self.wnd = 20
+        self.kernel5 = np.ones((5,5),np.uint8)
+        self.wnd = 18
         self.thres = [80,80,40]
 
     def get_mask(self,img,frame_num):
         if frame_num > 100:
             self.wnd = 50
         else:
-            self.wnd = 20
+            self.wnd = 18
 
         buoy_pnt_1 = self.buoy_pnts[frame_num,0:2]
         buoy_pnt_2 = self.buoy_pnts[frame_num,2:4]
@@ -76,33 +77,62 @@ class color_mask:
 
 
         buoy1_img = img[bds1[0]:bds1[1],bds1[2]:bds1[3]]
+
+        # temp_image1 = buoy1_img.copy()
+        
         color1u = np.array([img[buoy_pnt_1[1],buoy_pnt_1[0],0]+self.thres[0],img[buoy_pnt_1[1],buoy_pnt_1[0],1]+self.thres[0],img[buoy_pnt_1[1],buoy_pnt_1[0],2]+self.thres[0]])
         color1b = np.array([img[buoy_pnt_1[1],buoy_pnt_1[0],0]-self.thres[0],img[buoy_pnt_1[1],buoy_pnt_1[0],1]-self.thres[0],img[buoy_pnt_1[1],buoy_pnt_1[0],2]-self.thres[0]])
         mask1 = cv2.inRange(buoy1_img, np.clip(color1b,0,255), np.clip(color1u,0,255))
+        
+        # temp_image1 = np.hstack([temp_image1, cv2.merge([mask1.copy(),mask1.copy(),mask1.copy()])])
+        
         mask1 = cv2.morphologyEx(mask1, cv2.MORPH_OPEN, self.kernel3)
         mask1 = cv2.morphologyEx(mask1, cv2.MORPH_CLOSE, self.kernel5)
         out_image[bds1[0]:bds1[1],bds1[2]:bds1[3],0] = mask1
 
+        # mask1_1 = cv2.inRange(buoy1_img, (0,200,200), (255,255,255))
+        # temp_image1 = np.hstack([temp_image1, cv2.merge([mask1_1.copy(),mask1_1.copy(),mask1_1.copy()])])
+        
+        
 
         if (buoy_pnt_2 != [0,0]).all():
             buoy2_img = img[bds2[0]:bds2[1],bds2[2]:bds2[3]]
+            # temp_image2 = buoy2_img.copy()
             color2u = np.array([img[buoy_pnt_2[1],buoy_pnt_2[0],0]+self.thres[1],img[buoy_pnt_2[1],buoy_pnt_2[0],1]+self.thres[1],img[buoy_pnt_2[1],buoy_pnt_2[0],2]+self.thres[1]])
             color2b = np.array([img[buoy_pnt_2[1],buoy_pnt_2[0],0]-self.thres[1],img[buoy_pnt_2[1],buoy_pnt_2[0],1]-self.thres[1],img[buoy_pnt_2[1],buoy_pnt_2[0],2]-self.thres[1]])
             mask2 = cv2.inRange(buoy2_img, np.clip(color2b,0,255), np.clip(color2u,0,255))
-            out_image[bds2[0]:bds2[1],bds2[2]:bds2[3],1] = mask2
+            # temp_image2 = np.hstack([temp_image2, cv2.merge([mask2.copy(),mask2.copy(),mask2.copy()])])
             mask2 = cv2.morphologyEx(mask2, cv2.MORPH_OPEN, self.kernel3)
             mask2 = cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, self.kernel5)
+            out_image[bds2[0]:bds2[1],bds2[2]:bds2[3],1] = mask2
+
+            # mask2_1 = cv2.inRange(buoy2_img, (0,0,200), (255,255,255))
+            # temp_image2 = np.hstack([temp_image2, cv2.merge([mask2_1.copy(),mask2_1.copy(),mask2_1.copy()])])
 
         
         if (buoy_pnt_3 != [0,0]).all():
             buoy3_img = img[bds3[0]:bds3[1],bds3[2]:bds3[3]]
+            temp_image3 = buoy3_img.copy()
             color3u = np.array([img[buoy_pnt_3[1],buoy_pnt_3[0],0]+self.thres[2],img[buoy_pnt_3[1],buoy_pnt_3[0],1]+self.thres[2],img[buoy_pnt_3[1],buoy_pnt_3[0],2]+self.thres[2]])
             color3b = np.array([img[buoy_pnt_3[1],buoy_pnt_3[0],0]-self.thres[2],img[buoy_pnt_3[1],buoy_pnt_3[0],1]-self.thres[2],img[buoy_pnt_3[1],buoy_pnt_3[0],2]-self.thres[2]])
             mask3 = cv2.inRange(buoy3_img, np.clip(color3b,0,255), np.clip(color3u,0,255))
+            
+            mask3 = cv2.circle(mask3, (round(.45*mask3.shape[0]),round(.45*mask3.shape[1])), 9, 255, 6) 
+            # temp_image3 = np.hstack([temp_image3, cv2.merge([mask3.copy(),mask3.copy(),mask3.copy()])])
+            mask3 = cv2.morphologyEx(mask3, cv2.MORPH_OPEN, self.kernel3)
+            # mask3 = cv2.morphologyEx(mask3, cv2.MORPH_CLOSE, self.kernel3)
             out_image[bds3[0]:bds3[1],bds3[2]:bds3[3],2] = mask3
-            mask3 = cv2.morphologyEx(mask3, cv2.MORPH_OPEN, self.kernel5)
-            mask3 = cv2.morphologyEx(mask3, cv2.MORPH_CLOSE, self.kernel5)
+            # out_image = cv2.circle(out_image, (buoy_pnt_3[0],buoy_pnt_3[1]), 9, (0,0,255), 6) 
+            window_name = 'Image'
+   
 
+
+            # mask3_1 = cv2.inRange(buoy2_img, (0,200,0), (255,255,255))
+            # temp_image3 = np.hstack([temp_image3, cv2.merge([mask3_1.copy(),mask3_1.copy(),mask3_1.copy()])])
+
+
+        # total_image = np.vstack([temp_image1,temp_image2,temp_image3])
+        # cv2.imwrite( "masking_image.png", total_image)
         return out_image
 
         
@@ -135,7 +165,7 @@ class color_mask:
         # out_image[Gp > thresholds[1]] = (0,255,0)
         # out_image[Rp > thresholds[2]] = (0,0,255)
 
-    def get_mask_old(self):
+    def get_mask_old(self,img,img_num):
         ret, frame_mask = self.cap.read()
 
         if frame_mask is None:
@@ -208,25 +238,255 @@ class color_mask:
         return color_seg1, color_seg2, color_seg3, color_segR 
 
 
+
 class GMM:
-    def __init__(self,GMM_file=None):
+    # train data, number of ellipsoids, iterations
+    def __init__(self,X,number_of_sources,iterations,threshold):
+        self.iterations = iterations
+        self.number_of_sources = number_of_sources
+        self.X = X
+        self.mu = None
+        self.pi = None
+        self.cov = None
+        self.XY = None
+        self.show_plot = False
+        self.show_log_plot = True
+        self.h = X.shape[0]
+        self.w = X.shape[1]
+        self.threshold = threshold
+        
 
-        if GMM_file is not None:
-            gmm_data = np.load(GMM_file)
+    def save_params(self, prefix):
+        np.save(prefix + "median.npy", self.med)
+        np.save(prefix + "mean.npy", self.mu)
+        np.save(prefix + "covars.npy", self.cov)
+        np.save(prefix + "weights.npy", self.pi)
 
-            self.k = gmm_data.shape[0]
+    def load_params(self, prefix):
+        self.med = np.load(prefix + "median.npy")
+        self.mu = np.load(prefix + "mean.npy")
+        self.cov = np.load(prefix + "covars.npy")
+        self.pi = np.load(prefix + "weights.npy")
+    
 
-            self.weights = gmm_data[:,0]
-            self.means = gmm_data[:,1]
-            self.covariances = gmm_data[:,2]
-            self.threshold = gmm_data[:,3]
-        else:
-            self.k = 0
+    """Define a function which runs for iterations, iterations"""
+    def train(self):
+        # A small threshold that adds in a small covariance matrix with the actual covariance mat
+        # This is done so that the final covariance matrix is invertible even if the actual covariance matrix is singular
+        self.reg_cov = 1e-6*np.identity(len(self.X[0]))
+        # coordinates of the data points
+        # x,y = np.meshgrid(np.sort(self.X[:,0]),np.sort(self.X[:,1]))
+        # self.XY = np.array([x.flatten(),y.flatten()]).T
+        
+        # self.mu=np.array([[ 73,  95,  98],
+        # [113, 127, 104],
+        # [172, 100, 136],
+        # [ 90,  94,  97],
+        # [150, 171, 140],
+        # [108,  57, 136],
+        # [129, 139,  67]])
 
-            self.weights = None
-            self.means = None
-            self.covariances = None
-            self.threshold = None
+        """ 1. Set the initial mu, covariance and pi values"""
+        # self.mu = np.random.randint(min(self.X[:,0]),max(self.X[:,0]),size=(self.number_of_sources,len(self.X[0]))) 
+        
+        # This is a nxm matrix since we assume n sources (n Gaussians) where each has m dimensions
+        # self.cov = np.zeros((self.number_of_sources,len(X[0]),len(X[0]))) 
+        # # We need a nxmxm covariance matrix for each source since we have m features --> We create symmetric covariance matrices with ones on the digonal
+        # for dim in range(len(self.cov)):
+        #     np.fill_diagonal(self.cov[dim],5)
+
+        self.cov = [ np.cov(self.X.T) for _ in range(self.number_of_sources) ]
+        
+
+        idxs = np.random.choice(self.h, self.number_of_sources, False)
+        self.mu = np.array(self.X[idxs, :], dtype=np.float)
+
+        
+
+        self.pi = np.ones(self.number_of_sources)/self.number_of_sources # Are "Fractions"
+        log_likelihoods = [] # In this list we store the log likehoods per iteration and plot them in the end to check if
+        
+        # print(self.mu)
+        # print(self.cov)
+        # print(np.shape(self.mu))
+        # print(len(self.cov))
+        # print(self.pi)
+                                 # if we have converged
+        # print(len(self.cov))
+        # print(self.X)    
+        """Plot the initial state"""    
+        
+
+        # for m,c in zip(self.mu,self.cov):
+        #     c += self.reg_cov
+        #     multi_normal = multivariate_normal(mean=m,cov=c)
+        #     # ax0.contour(np.sort(self.X[:,0]),np.sort(self.X[:,1]), \
+        #     #     multi_normal.pdf(self.XY).reshape(len(self.X),len(self.X)),colors='black',alpha=0.3)
+        #     ax0.scatter(m[0],m[1],c='grey',zorder=10,s=100)
+        # plt.show()
+
+        
+        flag = 1
+        it = 0
+
+        if self.show_plot:
+            fig = plt.figure()
+            ax0 = Axes3D(fig)
+
+            scat=ax0.scatter(self.X[:,0],self.X[:,1],self.X[:,2])
+            ax0.set_title('Initial state')
+
+        for i in range(self.iterations):               
+            print("Iteration {}".format(i))
+            """E Step"""
+            # number of samples * number of sources 
+            r_ic = np.zeros((len(self.X),len(self.cov)))
+            # if flag:
+            #     print(np.shape(r_ic))
+            #     flag = 0
+            
+            # print(np.shape(np.sum([pi_c*multivariate_normal(mean=mu_c,cov=cov_c).pdf(X) \
+            #         for pi_c,mu_c,cov_c in zip(self.pi,self.mu,self.cov+self.reg_cov)],axis=0)))
+          
+            for m,co,p,r in zip(self.mu,self.cov,self.pi,range(len(r_ic[0]))):
+                
+                # co+=self.reg_cov
+                # print(co)
+                mn = multivariate_normal(mean=m,cov=co)
+                # print(it)
+                # if flag:
+                #     # print(mn.pdf(self.X)) # This is a 500 length vector 
+                #     flag = 0
+                #     print(np.shape(r_ic))
+                #     print(co)
+
+                
+                r_ic[:,r] = p*mn.pdf(self.X)/np.sum([pi_c*multivariate_normal(mean=mu_c,cov=cov_c).pdf(self.X) \
+                    for pi_c,mu_c,cov_c in zip(self.pi,self.mu,self.cov+self.reg_cov)],axis=0)
+                # print(r_ic)
+                # temp[:,r] = r_ic[:,r]
+            #     r_ic[:,r] = p*mn.pdf(self.X)
+            # print(np.shape(r_ic))
+            # print(np.shape(r_ic))
+            # denom = np.sum(r_ic,axis=1)
+            # denom_ = np.vstack((denom, denom, denom, denom, denom, denom, denom)) 
+            # print(np.shape(r_ic))
+            # # print(denom)
+            # print(r_ic/denom_.T)
+            
+            """M Step"""
+
+            # Calculate the new mean vector and new covariance matrices, based on the probable membership of the single x_i to classes c --> r_ic
+            self.mu = []
+            self.cov = []
+            self.pi = []
+            log_likelihood = []
+            
+            for c in range(len(r_ic[0])):
+
+                m_c = np.sum(r_ic[:,c],axis=0)
+                # print(m_c)
+                # boo = self.X*r_ic[:,c].reshape(len(self.X),1)
+                # # print(                     np.shape(boo))
+                # val = np.hstack(( self.X[:,0].reshape(len(self.X),1)*r_ic[:,c].reshape(len(self.X),1),\
+                #  self.X[:,1].reshape(len(self.X),1)*r_ic[:,c].reshape(len(self.X),1) ))
+                # print(val-boo)
+                # print(boo[:,0].reshape(len(self.X),1))
+                # print(len(self.X[:,0]))
+                mu_c = (1/m_c)*np.sum(self.X*r_ic[:,c].reshape(len(self.X),1),axis=0)
+                # print(mu_c)
+                self.mu.append(mu_c)
+
+                # Calculate the covariance matrix per source based on the new mean
+                self.cov.append(((1/m_c)*np.dot((np.array(r_ic[:,c]).reshape(len(self.X),1) \
+                    *(self.X-mu_c)).T,(self.X-mu_c)))+self.reg_cov)
+                
+                self.pi.append(m_c/np.sum(r_ic))
+            
+            """Log likelihood"""
+            log_likelihoods.append(np.log(np.sum([k*multivariate_normal(self.mu[i],self.cov[j]).pdf(self.X) \
+                for k,i,j in zip(self.pi,range(len(self.mu)),range(len(self.cov)))])))
+
+            for m,c in zip(self.mu,self.cov):
+                c += self.reg_cov
+                multi_normal = multivariate_normal(mean=m,cov=c)
+                # ax0.contour(np.sort(self.X[:,0]),np.sort(self.X[:,1]), \
+                #     multi_normal.pdf(self.XY).reshape(len(self.X),len(self.X)),colors='black',alpha=0.3)
+                if self.show_plot:
+                    ax0.scatter(m[0],m[1],m[2],c='red')
+            # scat.set_offsets(self.mu)
+
+            if self.show_plot:
+                plt.pause(0.01)
+            if i < self.iterations-1:
+                for m,c in zip(self.mu,self.cov):
+                    c += self.reg_cov
+                    multi_normal = multivariate_normal(mean=m,cov=c)
+                    # ax0.contour(np.sort(self.X[:,0]),np.sort(self.X[:,1]), \
+                    #     multi_normal.pdf(self.XY).reshape(len(self.X),len(self.X)),colors='black',alpha=0.3)
+                    if self.show_plot:
+                        ax0.scatter(m[0],m[1],m[2],c='white')
+            # else: 
+            #     print("eabvhauet")
+            #     for m,c in zip(self.mu,self.cov):
+            #         c += self.reg_cov
+            #         multi_normal = multivariate_normal(mean=m,cov=c)
+            #         # ax0.contour(np.sort(self.X[:,0]),np.sort(self.X[:,1]), \
+            #         #     multi_normal.pdf(self.XY).reshape(len(self.X),len(self.X)),colors='black',alpha=0.3)
+            #         ax0.scatter(m[0],m[1],m[2],c='red',s=5)
+           
+        # fig = plt.figure(figsize=(10,10))
+        # ax0 = fig.add_subplot(111)
+        
+
+        if self.show_log_plot:
+            fig2 = plt.figure(figsize=(10,10))
+            ax1 = fig2.add_subplot(111) 
+            ax1.set_title('Log-Likelihood')
+            ax1.plot(range(0,self.iterations,1),log_likelihoods)
+            plt.show()
+
+
+
+        # new_data = np.reshape(train_data, (sh[0], 1, 3))
+    
+        likelihoods = np.zeros((self.h, self.number_of_sources))
+        # Compute likelihoods
+        for i in range(self.number_of_sources):
+            normal = multivariate_normal.pdf(self.X,
+                                             self.mu[i],
+                                             self.cov[i],
+                                             allow_singular=True)
+            pd = self.pi[i] * normal
+            likelihoods[:, i] = pd
+
+        med = likelihoods
+        self.med = np.max(np.mean(med, axis=1))
+        print(self.med)
+    
+    # """Predict the membership of an unseen, new datapoint"""
+    # def predict(self,Y):
+    #     # PLot the point onto the fittet gaussians
+    #     fig3 = plt.figure()
+    #     ax2 = fig3.add_subplot(111)
+    #     ax2.scatter(self.X[:,0],self.X[:,1])
+    #     for m,c in zip(self.mu,self.cov):
+    #         multi_normal = multivariate_normal(mean=m,cov=c)
+    #         ax2.contour(np.sort(self.X[:,0]),np.sort(self.X[:,1]),multi_normal.pdf(self.XY).\
+    #             reshape(len(self.X),len(self.X)),colors='black',alpha=0.3)
+    #         ax2.scatter(m[0],m[1],c='grey',zorder=10,s=100)
+    #         ax2.set_title('Final state')
+    #         for y in Y:
+    #             ax2.scatter(y[0],y[1],c='orange',zorder=10,s=100)
+    #     prediction = []        
+    #     for m,c in zip(self.mu,self.cov):  
+    #         #print(c)
+    #         prediction.append(multivariate_normal(mean=m,cov=c).pdf(Y)/np.sum(\
+    #             [multivariate_normal(mean=mean,cov=cov).pdf(Y) for mean,cov in zip(self.mu,self.cov)]))
+    #     #plt.show()
+    #     return prediction
+         
+ 
 
 
     def apply_gmm(self,img):
@@ -237,23 +497,23 @@ class GMM:
         y = 480
         x = 640
 
-        data = np.reshape(img, (x*y, 3))
+        data_img = np.reshape(img, (x*y, 3))
 
-        prob = np.zeros((data.shape[0], self.k))
+        prob = np.zeros((data_img.shape[0], self.number_of_sources))
 
         # Compute Probabilty
-        for i in range(self.k):
-            normal = multivariate_normal.pdf(data,self.means[i],self.covariances[i],allow_singular=True)
-            pd = self._weights[i] * normal
+        for i in range(self.number_of_sources):
+            normal = multivariate_normal.pdf(data_img,self.mu[i],self.cov[i],allow_singular=True)
+            pd = self.pi[i] * normal
             prob[:, i] = pd
 
         # Reshape into image format
         loglikes = np.sum(prob, axis=1)
         prob_img = np.reshape(loglikes, (y, x))
-
+        print('Average threshold: ',np.mean(prob_img))
         # Find points above threshold
         out_image = np.zeros((y, x), dtype=np.uint8)
-        out_image[loglike_img > self.threshold] = 255
+        out_image[prob_img > self.med*self.threshold] = 255
         # out_image[loglike_img > self.median*self.threshold] = 255        
         
         return out_image

@@ -91,7 +91,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import style
 style.use('fivethirtyeight')
-from sklearn.datasets.samples_generator import make_blobs
+# from sklearn.datasets.samples_generator import make_blobs
 import numpy as np
 from scipy.stats import multivariate_normal
 from functions import color_mask
@@ -111,13 +111,14 @@ capture = cv2.VideoCapture('detectbuoy.avi')
 mask_gen = color_mask()
 
 ret, frame = capture.read()
-mask = mask_gen.get_mask()
+mask = mask_gen.get_mask(frame,0)
 # right middle left
 color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(frame,mask)
 
 # input data
 X = np.vstack((color_seg1, color_seg2, color_seg3))
 h, w = np.shape(X)
+
 class GMM:
     # train data, number of ellipsoids, iterations
     def __init__(self,X,number_of_sources,iterations):
@@ -140,13 +141,13 @@ class GMM:
         # x,y = np.meshgrid(np.sort(self.X[:,0]),np.sort(self.X[:,1]))
         # self.XY = np.array([x.flatten(),y.flatten()]).T
         
- #        self.mu=np.array([[ 73,  95,  98],
- # [113, 127, 104],
- # [172, 100, 136],
- # [ 90,  94,  97],
- # [150, 171, 140],
- # [108,  57, 136],
- # [129, 139,  67]])
+        # self.mu=np.array([[ 73,  95,  98],
+        # [113, 127, 104],
+        # [172, 100, 136],
+        # [ 90,  94,  97],
+        # [150, 171, 140],
+        # [108,  57, 136],
+        # [129, 139,  67]])
 
         """ 1. Set the initial mu, covariance and pi values"""
         # self.mu = np.random.randint(min(self.X[:,0]),max(self.X[:,0]),size=(self.number_of_sources,len(self.X[0]))) 

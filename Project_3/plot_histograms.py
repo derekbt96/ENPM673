@@ -14,9 +14,9 @@ def main():
 	mask_gen = color_mask()
 
 	ret, frame = capture.read()
-	mask = mask_gen.get_mask()
+	mask = mask_gen.get_mask(frame,0)
 	color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(frame,mask)
-
+	
 	
 	capture.release()
 	mask_gen.cap.release()
@@ -39,14 +39,14 @@ def main():
 	plt.hist(color_seg3[:,0], bins=256, range=(0.0, 255.0), fc='b', ec='b')
 	plt.hist(color_seg3[:,1], bins=256, range=(0.0, 255.0), fc='g', ec='g')
 	plt.hist(color_seg3[:,2], bins=256, range=(0.0, 255.0), fc='r', ec='r')
-	plt.hist(.7*color_seg3[:,1]+.3*color_seg3[:,2], bins=256, range=(0.0, 255.0), fc='k', ec='k')
+	# plt.hist(.7*color_seg3[:,1]+.3*color_seg3[:,2], bins=256, range=(0.0, 255.0), fc='k', ec='k')
 	plt.title('Image Histogram Buoy 3')
 	
 	plt.subplot(414)
 	plt.hist(color_segR[:,0], bins=256, range=(0.0, 255.0), fc='b', ec='b')
 	plt.hist(color_segR[:,1], bins=256, range=(0.0, 255.0), fc='g', ec='g')
 	plt.hist(color_segR[:,2], bins=256, range=(0.0, 255.0), fc='r', ec='r')
-	plt.hist(color_segR[:,1], bins=256, range=(0.0, 255.0), fc='k', ec='k')
+	# plt.hist(color_segR[:,1], bins=256, range=(0.0, 255.0), fc='k', ec='k')
 	plt.title('Image Histogram Remainder')
 
 	plt.show()

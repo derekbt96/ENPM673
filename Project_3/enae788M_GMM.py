@@ -45,7 +45,7 @@ class GMM(object):
             self._means = np.array(self._train[idxs, :], dtype=np.float)
 
             self.hooray, self.iters, self._means, self._covariances, self._weights = self._train_gmm()
-
+            
             # Now that the data has been fit, compute the likelihoods for the training data
             sh = train_data.shape
             new_data = np.reshape(train_data, (sh[0], 1, 3))
@@ -127,10 +127,10 @@ class GMM(object):
                                                  self._means[i],
                                                  self._sigmas[i],
                                                  allow_singular=True)
-
+                
                 # Adjust by weight
                 pd = self._pis[i] * normal
-
+                
                 # Update
                 self._rs[:, i] = pd
 
