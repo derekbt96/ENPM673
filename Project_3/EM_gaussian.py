@@ -31,8 +31,9 @@ def main():
     y3 = multivariate_normal.pdf(x,means[2],covs[2])
     y = y1+y2+y3
     fig = plt.figure()
-    # plt.hist(train, bins=100, range=(-5, 15), fc='b', ec='b')
-    plt.plot(x,y,'r--')
+    plt.subplot(2,1,1)
+    plt.hist(train, bins=100, range=(-4, 12), fc='b', ec='b')
+    
     # plt.plot(x,y1)
     # plt.plot(x,y2)
     # plt.plot(x,y3)
@@ -88,22 +89,16 @@ def main():
             # Update
             rs[:, i] = pd
 
-        # Compute log likelihood
         tmp = np.sum(rs, axis=1)
         log_like = np.sum(np.log(tmp))
 
-        # Have we converged?
         if iter > 1:
             print("iteration: %s     ||mu - mu_1|| = %s" % (iter, log_like - last_log_like))
             if np.abs(log_like - last_log_like) < e:
-                print("We did it!")
-                hooray = True
                 break
 
         # Have we failed?
         if iter == MAX_ITERATIONS:
-            print("We didn't do it :(")
-            hooray = False
             break
 
         # Add the new likelihoods
@@ -124,9 +119,7 @@ def main():
             tmp = np.matrix(train - means[i])
             sigmas[i] = np.array(1 / nks[i] * np.dot(np.multiply(tmp.T, rs[:, i]), tmp))
 
-        
-    # Return success, means, covars, and weights
-    # return hooray, iter, means, sigmas, pis
+
     
 
 
@@ -139,8 +132,8 @@ def main():
     # median = np.max(np.mean(med, axis=1))
     # print(sigmas[0].shape)
     
-    print(sigmas)
-    print(means)
+    # print(sigmas)
+    # print(means)
     yn1 = multivariate_normal.pdf(x,means[0,0],sigmas[0][0,0])
     yn2 = multivariate_normal.pdf(x,means[1,0],sigmas[1][1,1])
     yn3 = multivariate_normal.pdf(x,means[2,0],sigmas[2][2,2])
@@ -149,6 +142,8 @@ def main():
 
      # fig = plt.figure()
     # plt.hist(train, bins=100, range=(-5, 15), fc='b', ec='b')
+    plt.subplot(2,1,2)
+    plt.plot(x,y,'r--')
     plt.plot(x,yn,'b',linewidth=2)
     plt.show()
 main()

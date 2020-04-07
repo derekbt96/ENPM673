@@ -7,7 +7,7 @@ from scipy.stats import multivariate_normal
 
 class color_data:
     def __init__(self):
-        if True:
+        if False:
             self.train1 = np.load('color_data/training_buoy1_data.npy')
         else:
             self.train1 = np.load('color_data/training_buoy1_data_HSV.npy')
@@ -271,8 +271,7 @@ class GMM:
 
     """Define a function which runs for iterations, iterations"""
     def train(self):
-        # A small threshold that adds in a small covariance matrix with the actual covariance mat
-        # This is done so that the final covariance matrix is invertible even if the actual covariance matrix is singular
+        
         self.reg_cov = 1e-6*np.identity(len(self.X[0]))
         # coordinates of the data points
         # x,y = np.meshgrid(np.sort(self.X[:,0]),np.sort(self.X[:,1]))
@@ -425,7 +424,13 @@ class GMM:
                     # ax0.contour(np.sort(self.X[:,0]),np.sort(self.X[:,1]), \
                     #     multi_normal.pdf(self.XY).reshape(len(self.X),len(self.X)),colors='black',alpha=0.3)
                     if self.show_plot:
+
                         ax0.scatter(m[0],m[1],m[2],c='white')
+                        e_vals, e_vecs = np.linalg.eig(c) # val, vecs
+                        radii = np.sqrt(e_vals)
+                        rotation = e_vecs 
+                        center = m 
+                        self.plot_ellipsoid_3d(center, radii, rotation, ax0)
             # else: 
             #     print("eabvhauet")
             #     for m,c in zip(self.mu,self.cov):
@@ -510,7 +515,7 @@ class GMM:
         # Reshape into image format
         loglikes = np.sum(prob, axis=1)
         prob_img = np.reshape(loglikes, (y, x))
-        print('Average threshold: ',np.mean(prob_img))
+        # print('Average threshold: ',np.mean(prob_img))
         # Find points above threshold
         out_image = np.zeros((y, x), dtype=np.uint8)
         out_image[prob_img > self.med*self.threshold] = 255
@@ -519,3 +524,67 @@ class GMM:
         return out_image
 
 
+class buoy_detector:
+    def __init__(self):
+        self.kernel3 = np.ones((3,3),np.uint8)
+        self.kernel5 = np.ones((5,5),np.uint8)
+        self.font = cv2.FONT_HERSHEY_SIMPLEX
+
+    
+    def add_points(self,img,pnts):
+        for pnt in pnts:
+            # print(pnt)
+            if (pnt != [0,0]).all():
+                img_point = (int(pnt[0]),int(pnt[1]))
+                cv2.circle(img, img_point, 5, (50,50,50), 10)
+                cv2.putText(img,str(img_point), img_point, self.font, .5,(50,50,50),1,cv2.LINE_AA)
+
+        return img
+
+    def detect(self,img):
+
+        img = cv2.morphologyEx(img, cv2.MORPH_OPEN, self.kernel3)
+        contours, hierarchy = cv2.findContours(img.copy() ,cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        # contours = np.squeeze(contours)
+        blank_mask = np.zeros((480,640,1),np.uint8)
+        
+        if contours is not None: 
+            areas = np.zeros((len(contours),1))
+            # heights = np.zeros((len(contours),1))
+            pnts = np.zeros((len(contours),2))
+
+            for contour_indx in range(len(contours)):
+                con_temp = contours[contour_indx]
+
+                area_temp = cv2.contourArea(con_temp)
+                height = max(con_temp[:,0,1]) - min(con_temp[:,0,1])
+                width = max(con_temp[:,0,0]) - min(con_temp[:,0,0])
+                
+                if area_temp > 20 & height < 80:# & height/width < 3.0:
+                    areas[contour_indx] = area_temp
+                    pnts[contour_indx,:] = np.mean(con_temp,axis=0)
+            # print((areas>20).any())
+
+            if (areas > 20).any():
+                final_indx = np.argmax(areas)
+                contour_final = contours[final_indx]
+                pnt_final = pnts[final_indx]
+
+                # print(contour_final.shape)        
+                cv2.drawContours(blank_mask, [contour_final], 0, 255, 3)
+
+                # cv2.imshow('result',blank_mask)
+                # cv2.waitKey(-1)
+                
+                return pnt_final,blank_mask
+
+            else:
+                # print('failed1')
+                return np.array([0,0]),blank_mask
+        else:
+            # print('failed2')
+            return np.array([0,0]),blank_mask
+
+
+        
+        return img

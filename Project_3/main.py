@@ -1,75 +1,81 @@
 import numpy as np 
 import cv2
 from matplotlib import pyplot as plt
-from functions import color_mask, color_data, GMM
+from functions import color_mask, color_data, GMM, buoy_detector
 import scipy
 from scipy import io 
 
 
+# Change training here
+Train = False
+
+
+
+
+
+save_data = False
 def main():
 	
 	
 	
 	capture = cv2.VideoCapture('detectbuoy.avi')
-	mask_gen = color_mask()
-
-	ret, frame = capture.read()
-	mask = mask_gen.get_mask(frame,0)
-	
-	HSV = cv2.cvtColor(frame.copy(), cv2.COLOR_BGR2HSV)
-	color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(HSV,mask)
-
-
 	data = color_data()
+	buoy_detect = buoy_detector()
 	
-	# gmm_1 = GMM(color_seg1, 1, 100, .25)
-	# gmm_1 = GMM(data.train1, 1, 100, .25)
-	# gmm_1.train()
-	# gmm_1.save_params('color_data/buoy1_')
-	# gmm_1.load_params('color_data/buoy1_')
-	# mask = gmm_1.apply_gmm(frame)
+	
+	gmm_1 = GMM(data.train1, 1, 100, .3)
+	gmm_2 = GMM(data.train2, 4, 100, .25)
+	gmm_3 = GMM(data.train3, 4, 200, .8)
 
-	# gmm_2 = GMM(data.train2, 4, 100, .25)
-	# gmm_2.train()
-	# gmm_2.save_params('color_data/buoy2_')
-	# gmm_2.load_params('color_data/buoy2_')
-	# mask = gmm_2.apply_gmm(HSV)
 
-	# gmm_3 = GMM(color_seg3, 4, 200, .5)
-	gmm_3 = GMM(data.train3, 4, 200, .5)
-	# gmm_3.train()
-	# gmm_3.save_params('color_data/buoy3_')
-	gmm_3.load_params('color_data/buoy3_')
-	gmm_3.threshold = .85
-	mask = gmm_3.apply_gmm(HSV)
+	if Train:
+		gmm_1.train()
+		gmm_2.train()
+		gmm_3.train()
+	else:
+		gmm_1.load_params('color_data/buoy1_')
+		gmm_2.load_params('color_data/buoy2_')
+		gmm_3.load_params('color_data/buoy3_')
+	
+	
+	gmm_1.save_params('color_data/buoy1_')
+	gmm_2.save_params('color_data/buoy2_')
+	gmm_3.save_params('color_data/buoy3_')
 	
 
-	cv2.imshow('result',mask)
-	cv2.waitKey(-1)
 
-	# out = cv2.VideoWriter('road_video.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (800,800))
-	# frame_indx = -1
-	# while(True):
-	# 	frame_indx += 1
-	# 	ret, frame = capture.read()
-	# 	if frame is None:
-	# 		break
-		
-		
-	# 	result = masker.get_mask(frame,frame_indx)
+	out = cv2.VideoWriter('GMM_marked.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (640,480))
+	frame_indx = -1
+	while(True):
+		frame_indx += 1
+		ret, frame = capture.read()
+		if frame is None:
+			break
+				
+		HSV = cv2.cvtColor(frame.copy(), cv2.COLOR_BGR2HSV)
 
+		mask1 = gmm_1.apply_gmm(HSV)
+		mask2 = gmm_2.apply_gmm(HSV)
+		mask3 = gmm_3.apply_gmm(HSV)
 		
-	# 	# result = cv2.resize(frame, (800, 400), interpolation = cv2.INTER_AREA)
-	# 	# out.write(result2)
-	# 	cv2.imshow('result',result)
-	# 	# break
-	# 	# if frame_indx > 50:
-	# 		# break
-	# 	if cv2.waitKey(50) & 0xFF == ord('q'):
-	# 		break
+		# result = cv2.merge([mask1,mask2,mask3])
+		
+		pnt1,result1 = buoy_detect.detect(mask1)
+		pnt2,result2 = buoy_detect.detect(mask2)
+		pnt3,result3 = buoy_detect.detect(mask3)
+		
+		result = cv2.merge([result1,result2,result3])
+		
+		result = buoy_detect.add_points(result,[pnt1,pnt2,pnt3])
 
-	# # out.release()
-	# capture.release()
-	# cv2.destroyAllWindows()
+		cv2.imwrite('gmm_marked_points.png',result)
+		out.write(result)
+		cv2.imshow('result',result)
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
+
+	out.release()
+	capture.release()
+	cv2.destroyAllWindows()
 
 main()
