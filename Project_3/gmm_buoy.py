@@ -19,7 +19,12 @@ class GMM:
         self.pi = None
         self.plt = True
 
-    def plot_ellipsoid_3d(self, center, radius, rotation, ax):
+    def plot_ellipsoid_3d(self, mu, cov, ax):
+
+        e_vals, e_vecs = np.linalg.eig(cov) # val, vecs
+        radius = np.sqrt(e_vals)
+        rotation = e_vecs 
+        center = mu
 
         u = np.linspace(0.0, 2.0 * np.pi, 100)
         v = np.linspace(0.0, np.pi, 100)
@@ -28,9 +33,9 @@ class GMM:
         # unrotated ellipsoid 
         # source: https://www.mathworks.com/matlabcentral/answers/86921-plot-an-ellipsoid-with-matlab
         # https://kittipatkampa.wordpress.com/2011/08/04/plot-3d-ellipsoid/
-        x0 = center[0]+radius[0]*np.multiply(np.sin(theta), np.cos(phi))
-        y0 = center[1]+radius[1]*np.multiply(np.sin(theta), np.sin(phi))
-        z0 = center[2]+radius[2]*np.cos(theta)
+        x0 = radius[0]*np.multiply(np.sin(theta), np.cos(phi))
+        y0 = radius[1]*np.multiply(np.sin(theta), np.sin(phi))
+        z0 = radius[2]*np.cos(theta)
 
         a = np.kron( rotation[:,0].reshape(3,1), x0 )
         b = np.kron( rotation[:,1].reshape(3,1), y0 ) 
@@ -39,12 +44,13 @@ class GMM:
         data = a + b + c;
         n = data.shape[1]
         
-        x = data[0:n,:]  
-        y = data[n:2*n,:] 
-        z = data[2*n:3*n,:] 
+        x = data[0:n,:] + center[0]
+        y = data[n:2*n,:] + center[1]
+        z = data[2*n:3*n,:] + center[2]
+
         # print(np.shape(z))
         
-        ax.plot_wireframe(x0, y0, z0, rstride=10, cstride=10, color='#2980b9', alpha=0.2)
+        ax.plot_wireframe(x, y, z, rstride=10, cstride=10, color='#2980b9', alpha=0.2)
 
     def train(self):
 
@@ -120,15 +126,8 @@ class GMM:
                 ax0.scatter(mu_plot[:,0], mu_plot[:,1], mu_plot[:,2], c='white')
                 
         for m,c in zip(self.mu,self.cov):
-            
-            u = np.linspace(0.0, 2.0 * np.pi, 100)
-            v = np.linspace(0.0, np.pi, 100)
-            
-            e_vals, e_vecs = np.linalg.eig(c) # val, vecs
-            radii = np.sqrt(e_vals)
-            rotation = e_vecs 
-            center = m 
-            self.plot_ellipsoid_3d(center, radii, rotation, ax0)
+     
+            self.plot_ellipsoid_3d(m, c, ax0)
 
         fig2 = plt.figure()
         ax1 = fig2.add_subplot(111) 
@@ -162,10 +161,10 @@ def main():
     # right middle left
     color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(frame,mask)
     # input data
-    X = np.vstack((color_seg1, color_seg2, color_seg3))
-    # X = color_seg3
+#     X = np.vstack((color_seg1, color_seg2, color_seg3))
+    X = color_seg3
 
-    distributions = 7
+    distributions = 3
     iterations = 40
 
     gmm = GMM(X, distributions, iterations)    
