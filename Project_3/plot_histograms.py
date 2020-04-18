@@ -19,7 +19,6 @@ def main():
 	
 	
 	capture.release()
-	mask_gen.cap.release()
 	
 	
 	fig = plt.figure()

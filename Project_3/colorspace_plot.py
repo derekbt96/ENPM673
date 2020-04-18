@@ -16,7 +16,7 @@ def main():
 	ret, frame = capture.read()
 	mask = mask_gen.get_mask(frame,0)
 	HSV = cv2.cvtColor(frame.copy(), cv2.COLOR_BGR2HSV)
-	color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(frame,mask)
+	color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(HSV,mask)
 	
 	fig = plt.figure()
 	ax = Axes3D(fig)
@@ -40,13 +40,12 @@ def main():
 	
 
 	# ax.set_xlabel('H')
-	# ax.set_ylabel('G')
-	# ax.set_zlabel('R')
+	# ax.set_ylabel('S')
+	# ax.set_zlabel('V')
 	ax.view_init(elev=70., azim=-150)
 	plt.show()
 
 	capture.release()
-	mask_gen.cap.release()
 
 	
 

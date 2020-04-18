@@ -159,7 +159,8 @@ def main():
     mask = mask_gen.get_mask()
 
     # right middle left
-    color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(frame,mask)
+    HSV = cv2.cvtColor(frame.copy(), cv2.COLOR_BGR2HSV)
+    color_seg1, color_seg2, color_seg3, color_segR = mask_gen.get_all_arrays(HSV,mask)
     # input data
 #     X = np.vstack((color_seg1, color_seg2, color_seg3))
     X = color_seg3

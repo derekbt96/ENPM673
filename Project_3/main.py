@@ -44,7 +44,7 @@ def main():
 	
 
 
-	out = cv2.VideoWriter('GMM_marked.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (640,480))
+	# out = cv2.VideoWriter('GMM_marked.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (640,480))
 	frame_indx = -1
 	while(True):
 		frame_indx += 1
@@ -58,7 +58,7 @@ def main():
 		mask2 = gmm_2.apply_gmm(HSV)
 		mask3 = gmm_3.apply_gmm(HSV)
 		
-		# result = cv2.merge([mask1,mask2,mask3])
+		result_mask = cv2.merge([mask1,mask2,mask3])
 		
 		pnt1,result1 = buoy_detect.detect(mask1)
 		pnt2,result2 = buoy_detect.detect(mask2)
@@ -68,13 +68,14 @@ def main():
 		
 		result = buoy_detect.add_points(result,[pnt1,pnt2,pnt3])
 
-		cv2.imwrite('gmm_marked_points.png',result)
-		out.write(result)
-		cv2.imshow('result',result)
+		# cv2.imwrite('gmm_marked_points.png',result)
+		# out.write(result)
+		cv2.imshow('GMM',result_mask)
+		cv2.imshow('Buoys',result)
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
 
-	out.release()
+	# out.release()
 	capture.release()
 	cv2.destroyAllWindows()
 
