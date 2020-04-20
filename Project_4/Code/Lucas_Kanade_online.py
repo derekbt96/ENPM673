@@ -19,7 +19,7 @@ def get_New_Coordinate(Original, frame, x, y, size, gradOriginalX, gradOriginalY
     T = np.matrix([[Original[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
     x1 = np.matrix([[q for q in range(size)] for z in range(size)])
     y1 = np.matrix([[z] * size for z in range(size)])
-    
+
     gradOriginalX = np.matrix([[gradOriginalX[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
     gradOriginalY = np.matrix([[gradOriginalY[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
 
@@ -27,8 +27,8 @@ def get_New_Coordinate(Original, frame, x, y, size, gradOriginalX, gradOriginalY
 
     HessianOriginal = [[np.sum(np.multiply(gradOriginalP[a], gradOriginalP[b])) for a in range(6)] for b in range(6)]
     Hessianinv = np.linalg.pinv(HessianOriginal)
-    print(HessianOriginal)
-
+    # print(HessianOriginal)
+    
 
     p1, p2, p3, p4, p5, p6 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     k = 0
@@ -58,8 +58,13 @@ def get_New_Coordinate(Original, frame, x, y, size, gradOriginalX, gradOriginalY
         mean_cost = np.sum(np.absolute(steepest_error))
         deltap = Hessianinv.dot(steepest_error)
         dp = warpInv(deltap)
-        p1, p2, p3, p4, p5, p6 = p1 + dp[0, 0] + p1 * dp[0, 0] + p3 * dp[1, 0], p2 + dp[1, 0] + dp[0, 0] * p2 + p4 * dp[1, 0], p3 + dp[2, 0] + p1 * dp[2, 0] + p3 * dp[3, 0], p4 + dp[3, 0] + p2 * dp[2, 0] + p4 * dp[3, 0], p5 + \
-                                 dp[4, 0] + p1 * dp[4, 0] + p3 * dp[5, 0], p6 + dp[5, 0] + p2 * dp[4, 0] + p4 * dp[5, 0]
+
+        p1, p2, p3, p4, p5, p6 = p1 + dp[0, 0] + p1 * dp[0, 0] + p3 * dp[1, 0],
+                                 p2 + dp[1, 0] + p2 * dp[0, 0] + p4 * dp[1, 0],
+                                 p3 + dp[2, 0] + p1 * dp[2, 0] + p3 * dp[3, 0],
+                                 p4 + dp[3, 0] + p2 * dp[2, 0] + p4 * dp[3, 0],
+                                 p5 + dp[4, 0] + p1 * dp[4, 0] + p3 * dp[5, 0],
+                                 p6 + dp[5, 0] + p2 * dp[4, 0] + p4 * dp[5, 0]
         W = np.matrix([[1+p1,p3,p5], [p2,1+p4,p6]])
 
         if (min_cost == -1):

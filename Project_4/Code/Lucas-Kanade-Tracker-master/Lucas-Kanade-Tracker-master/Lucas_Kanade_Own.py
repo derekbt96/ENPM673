@@ -19,8 +19,8 @@ def get_New_Coordinate(Original, frame, x, y, size, gradOriginalX, gradOriginalY
     x1 = np.matrix([[q for q in range(size)] for z in range(size)])
     y1 = np.matrix([[z] * size for z in range(size)])
 
-    print(x1)
-    print(y1)
+    # print(x1)
+    # print(y1)
 
     gradOriginalX = np.matrix([[gradOriginalX[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
     gradOriginalY = np.matrix([[gradOriginalY[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
@@ -108,10 +108,10 @@ while (len(feature_point) > 0):
             newfeature_point.append((c,d))
     img = cv2.add(frame,mask)
     cv2.imshow('frame',img)
-    k = cv2.waitKey(30) & 0xff
+    k = cv2.waitKey(-1) & 0xff
     if k == 27:
         break
-    break
+    
     old_gray = frame_gray.copy()
     feature_point = newfeature_point[:]
 

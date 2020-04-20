@@ -25,12 +25,13 @@ while True:
 	if frame is None:
 		break
 
+	
 	result = tracker.apply(frame)
 
 	# result = cv2.resize(result, (800, 600), interpolation = cv2.INTER_AREA)
 	# out.write(result2)
 	cv2.imshow('result',result)
-	if cv2.waitKey(-1) & 0xFF == ord('q'):
+	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
 
 # out.release()
