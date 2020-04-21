@@ -41,7 +41,7 @@ class get_frames:
         temp_y = int(bounds[1])
         temp_h = int(abs(bounds[1] - bounds[3]))
         temp_w = int(abs(bounds[0] - bounds[2]))
-        print("{} {} {} {}".format(temp_x, temp_y, temp_h, temp_w))
+        # print("{} {} {} {}".format(temp_x, temp_y, temp_h, temp_w))
         return img[temp_y:temp_y+temp_h, temp_x:temp_x+temp_w]
 
     def get_bounds(self):
@@ -86,12 +86,12 @@ class LucasKanade:
         cv2.destroyAllWindows()
 
     # Additive Alignment (Affine); Need to solve for dp
-    def align(self, T, I, rect, p, dp0=np.zeros(6), threshold=0.001, iterations=50):
+    def align(self, T, I, rect, dp0=np.zeros(6), threshold=0.001, iterations=50):
 
         cap = get_frames(self.vid)
         T_rows, T_cols = T.shape
         I_rows, I_cols = I.shape
-        dp = dp0
+        p = dp0
 
         for i in range (iterations):
             # Forward warp matrix from frame_t to frame_t+1
