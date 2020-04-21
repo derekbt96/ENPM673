@@ -37,10 +37,11 @@ class get_frames:
         return cv2.cvtColor(read_frame, cv2.COLOR_BGR2GRAY)
 
     def crop_im(self,img, bounds):
-        temp_x = bounds[0]
-        temp_y = bounds[1]
-        temp_h = abs(bounds[1] - bounds[3])
-        temp_w = abs(bounds[0] - bounds[2])
+        temp_x = int(bounds[0])
+        temp_y = int(bounds[1])
+        temp_h = int(abs(bounds[1] - bounds[3]))
+        temp_w = int(abs(bounds[0] - bounds[2]))
+        print("{} {} {} {}".format(temp_x, temp_y, temp_h, temp_w))
         return img[temp_y:temp_y+temp_h, temp_x:temp_x+temp_w]
 
     def get_bounds(self):
@@ -106,21 +107,24 @@ class LucasKanade:
             dI_x = cv2.Sobel(I_warped, cv2.CV_64F, 1, 0, ksize=3).flatten()
             dI_y = cv2.Sobel(I_warped, cv2.CV_64F, 0, 1, ksize=3).flatten()
             
-            A = np.zeros(6).reshape(1,6)
+            # Hessian
+            H = np.zeros((6,6))
             for y in range(T_rows):
                 for x in range(T_cols):
                     dW = np.array([[x, 0, y, 0, 1, 0], [0, x, 0, y, 0, 1]])
-                    dI = np.array([dI_x[x*y], dI_y[x*y]]).reshape(1,2)                   
-                    A = np.vstack(( A, np.matmul(dI, dW).reshape(1,6) ))
+                    dI = np.array([dI_x[x*y], dI_y[x*y]]).reshape(1,2)
+                    A = np.matmul(dI, dW)
+                    H += A.T*A
+                    # A = np.vstack(( A, np.matmul(dI, dW).reshape(1,6) ))
                     # print(np.shape(A))
             
             # Steepest descent
-            A = np.sum(A, axis=0).reshape(1,6)
+            # A = np.sum(A, axis=0).reshape(1,6)
             # Hessian 
             # print(np.shape(A))
-            H = np.matmul(A.T, A)
-            w,v = np.linalg.eig(H)
-            print(w)
+            # H = np.matmul(A.T, A)
+            # w,v = np.linalg.eig(H)
+            # print(w)
             # Error image 
             err_im = (T - I_warped).flatten()
             err_im = np.reshape(err_im, (1, len(err_im)))
