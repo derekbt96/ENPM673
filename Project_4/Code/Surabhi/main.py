@@ -12,7 +12,7 @@ problem = 1
 
 cap = get_frames(problem)
 LK = LucasKanade(problem)
-iterations = 50 
+iterations = 20 
 threshold = 0.005
 # out = cv2.VideoWriter('tracker.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (800,600))
 
@@ -27,8 +27,13 @@ rects_all = []
 I_x = cap.get_frame()
 p = [1, 0, 0, 1, 0, 0]
 it = 0
+dp0 = np.zeros(6)
+# dp0[4] = rect[0]
+# dp0[5] = rect[1]
+
 while True:
 	print(it)
+	print(rect)
 	it +=1
 	see_I_x = cv2.rectangle(cv2.cvtColor(I_x, cv2.COLOR_GRAY2BGR), 
 		(int(rect[0]),int(rect[1])), (int(rect[2]), int(rect[3])), (0, 0, 255), 2) 
@@ -37,14 +42,12 @@ while True:
 	I_x1 = cap.get_frame()
 	if I_x1 is None:
 		break
-	dp0 = np.zeros(6)
-	dp0[4] = rect[0]
-	dp0[5] = rect[1]
+	
 	# Warp parameters, solve for dp
-	dp = LK.align(T_x, I_x1, rect, p, dp0=dp0,
+	p = LK.align(T_x, I_x1, rect, dp0=dp0,
 		threshold=threshold, iterations=iterations)
-
-	p = p + dp
+	dp0 = p
+	# p = p + dp
 	# Forward warp matrix from frame_t to frame_t+1
 	W = np.float32([ 
 		[1+p[0], p[2], p[4]], 
