@@ -10,11 +10,11 @@ class get_frames:
         
         self.vid = video_seq
         if video_seq == 1:
-            self.file_route = '/Car4/img/'
+            self.file_route = '../Car4/img/'
         elif video_seq == 2:
-            self.file_route = '/Bolt2/img/'
+            self.file_route = '../Bolt2/img/'
         else:
-            self.file_route = '/DragonBaby/img/'
+            self.file_route = '../DragonBaby/img/'
           
     def get_next_frame(self):
         num = str(self.frame_num)

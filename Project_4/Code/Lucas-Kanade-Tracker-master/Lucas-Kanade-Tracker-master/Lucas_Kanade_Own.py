@@ -25,6 +25,9 @@ def get_New_Coordinate(Original, frame, x, y, size, gradOriginalX, gradOriginalY
     gradOriginalX = np.matrix([[gradOriginalX[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
     gradOriginalY = np.matrix([[gradOriginalY[i, j] for j in range(x, x + size)] for i in range(y, y + size)])
 
+    print(x1)
+    print(y1)
+
     gradOriginalP = [np.multiply(x1, gradOriginalX), np.multiply(x1, gradOriginalY), np.multiply(y1, gradOriginalX),np.multiply(y1, gradOriginalY), gradOriginalX, gradOriginalY]
 
     HessianOriginal = [[np.sum(np.multiply(gradOriginalP[a], gradOriginalP[b])) for a in range(6)] for b in range(6)]

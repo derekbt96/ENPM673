@@ -29,7 +29,7 @@ while True:
 		(rect[0],rect[1]), (rect[2], rect[3]), (0, 0, 255), 2) 
 
 	T_x = cap.crop_im(I_x, rect)
-	I_x1 = cap.get_frame()
+	I_x1 = cap.get_next_frame()
 	if I_x1 is None:
 		break
 
