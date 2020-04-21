@@ -8,7 +8,7 @@ from functions import LucasKanade, get_frames
 # PROBLEM 1 = Car
 # PROBLEM 2 = Bolt
 # PROBLEM 3 = Dragon Baby
-problem = 2
+problem = 1
 
 cap = get_frames(problem)
 LK = LucasKanade(problem)
@@ -16,12 +16,16 @@ iterations = 50
 threshold = 0.005
 # out = cv2.VideoWriter('tracker.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (800,600))
 
+# start_frame = cap.get_next_frame()
+# result, rect_ini = LK.apply(start_frame)
+# print(rect_ini)
 rect_ini = cap.get_bounds()
 rect = rect_ini
 rects_all = []
 
 # starting
 I_x = cap.get_frame()
+p = [1, 0, 0, 1, 0, 0]
 
 while True:
 
@@ -29,17 +33,21 @@ while True:
 		(rect[0],rect[1]), (rect[2], rect[3]), (0, 0, 255), 2) 
 
 	T_x = cap.crop_im(I_x, rect)
-	I_x1 = cap.get_next_frame()
+	I_x1 = cap.get_frame()
 	if I_x1 is None:
 		break
-
+	dp0 = np.zeros(6)
+	dp0[4] = rect[0]
+	dp0[5] = rect[1]
 	# Warp parameters, solve for dp
-	dp = LK.align(T_x, I_x1, rect, 
+	dp = LK.align(T_x, I_x1, rect, p, dp0=dp0,
 		threshold=threshold, iterations=iterations)
+
+	p = p + dp
 	# Forward warp matrix from frame_t to frame_t+1
 	W = np.float32([ 
-		[1+dp[0], dp[2], dp[4]], 
-		[dp[1], 1+dp[3], dp[5]],
+		[1+p[0], p[2], p[4]], 
+		[p[1], 1+p[3], p[5]],
 		[0, 0, 1] ])
 
 	rect = np.vstack((rect.reshape(2, 2).T, np.ones(2)))
