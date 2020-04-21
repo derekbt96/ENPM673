@@ -26,11 +26,12 @@ rects_all = []
 # starting
 I_x = cap.get_frame()
 p = [1, 0, 0, 1, 0, 0]
-
+it = 0
 while True:
-
+	print(it)
+	it +=1
 	see_I_x = cv2.rectangle(cv2.cvtColor(I_x, cv2.COLOR_GRAY2BGR), 
-		(rect[0],rect[1]), (rect[2], rect[3]), (0, 0, 255), 2) 
+		(int(rect[0]),int(rect[1])), (int(rect[2]), int(rect[3])), (0, 0, 255), 2) 
 
 	T_x = cap.crop_im(I_x, rect)
 	I_x1 = cap.get_frame()
@@ -54,6 +55,11 @@ while True:
 
 	new_rect = np.matmul(W, rect).T
 	rect = new_rect[:2,:2].flatten()
+	rect[0] = int(rect[0])
+	rect[1] = int(rect[1])
+	rect[2] = int(rect[2])
+	rect[3] = int(rect[3])
+
 	rects_all.append(rect)
 
 	I_x = I_x1
