@@ -3,6 +3,7 @@ import numpy as np
 from ReadCameraModel import ReadCameraModel
 from UndistortImage import UndistortImage
 import os
+from functions import ransac_fundamental
 dirpath = os.getcwd()
 fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
 # iterate over all images
@@ -32,25 +33,26 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
 			img2 = img
 			img_orig2 = img_orig 
 
-			# orb = cv2.ORB_create(nfeatures=2000)
-			# kp, des = orb.detectAndCompute(gray_img, None)
-
-			# kp_img = cv2.drawKeypoints(img, kp, None, color=(0, 255, 0), flags=0)
-
+			# find orb features 
 			orb = cv2.ORB_create(nfeatures=500)
 			kp1, des1 = orb.detectAndCompute(img1, None)
 			kp2, des2 = orb.detectAndCompute(img2, None)
 
-			# cv2.NORM_HAMMING for ORB
+			# Feature matching: cv2.NORM_HAMMING for ORB
 			bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 			matches = bf.match(des1, des2)
-			matches = sorted(matches, key=lambda x: x.distance)# draw first 50 matches
+			matches = sorted(matches, key=lambda x: x.distance)
+			matches = matches[:50] # draw first 50 matches
 			match_img = cv2.drawMatches(img_orig1, 
-				kp1, img_orig2, kp2, matches[:50], None)
-
+				kp1, img_orig2, kp2, matches, None)
 			img1 = img2 
 			img_orig1 = img_orig2
 
-			# cv2.imshow('ORB', kp_img)
-			cv2.imshow('Matches', match_img)
-			cv2.waitKey(1000)
+			# cv2.imshow('Matches', match_img)
+			# cv2.waitKey(100)
+
+			points_f1 = np.float32([ kp1[m.queryIdx].pt for m in matches ]).reshape(-1,1,2)
+			point_f2 = np.float32([ kp2[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
+
+			inliers_f1, inliers_f2, F = ransac_fundamental(points_f1, point_f2)
+			# print(src_pts[:10])
