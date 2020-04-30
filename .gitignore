@@ -21,3 +21,8 @@ Project_2/night_fixed.avi
 Project_2/road_images.avi
 Project_2/road_video.avi
 *.jpg
+*.pyc
+*.zip
+Project_5/model/*
+Project_5/stereo/*
+Project_5/other/*
