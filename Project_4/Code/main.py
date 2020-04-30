@@ -8,7 +8,7 @@ from functions import LK_tracker, get_frames
 # PROBLEM 1 = Car
 # PROBLEM 2 = Bolt
 # PROBLEM 3 = Dragon Baby
-problem = 3
+problem = 1
 
 
 cap = get_frames(problem)
@@ -27,10 +27,9 @@ while True:
 		break
 
 	
-	result = tracker.apply2(frame)
+	result = tracker.apply(frame)
 	
 	# result = cv2.resize(result, (800, 600), interpolation = cv2.INTER_AREA)
-	# out.write(cv2.merge([result,result,result]))
 	cv2.imshow('result',result)
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break

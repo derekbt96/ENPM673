@@ -121,7 +121,7 @@ class LK_tracker:
 		W = np.matrix([[1., 0., 0.], [0., 1., 0.]])
 
 
-		for iterantion in range(20):
+		for iterantion in range(10):
 			# k += 1
 			# print(W)
 			warped = cv2.warpAffine(self.last_frame.copy(),W,(self.shape[0],self.shape[1]))
