@@ -18,7 +18,7 @@ orb_kp1 = None
 orb_des1 = None
 
 # Initialize Orb detector and BF matcher
-orb = cv2.ORB_create(nfeatures=200)
+orb = cv2.ORB_create(nfeatures=400)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
             
 
@@ -77,10 +77,9 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
             
             # Compute essential matrix
-            E = getCameraPose(F,K)
+            getCameraPose(F, K, points_f1, points_f2)
 
-            
-
+            break
             cv2.imshow('Epipolar lines', img_f1)
             # cv2.imshow('Epipolar lines', match_img)
             if cv2.waitKey(-1) & 0xFF == ord('q'):

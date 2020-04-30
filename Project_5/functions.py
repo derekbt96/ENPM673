@@ -1,4 +1,6 @@
 import numpy as np 
+import matplotlib
+import matplotlib.pyplot as plt
 import cv2
 
 def Fundamental(points_f1, points_f2):
@@ -164,8 +166,18 @@ def EpipolarLines(img_f1, points_f1, img_f2, points_f2, F):
     
     return img_f1, img_f2
         
+def plotCoordinates(pnts):
+    plt.figure(figsize=(6,6))
+    num_set = int(pnts.shape[1]/2)
+    print(num_set)
+    for i in range(num_set):
+        plt.scatter(pnts[:,2*i], pnts[:,2*i+1])#,s=.6)
+    plt.grid(True)
+    plt.show()
 
-def getCameraPose(F,K):
+
+
+def getCameraPose(F,K,p_old,p_new):
 
     # Get essential matrix
     E = np.matmul(np.matmul(K.T,F),K)
@@ -186,13 +198,26 @@ def getCameraPose(F,K):
     R2 = np.matmul(np.matmul(U,W),V.T)
     R3 = np.matmul(np.matmul(U,W.T),V.T)
     R4 = np.matmul(np.matmul(U,W.T),V.T)
+    
+    # P1 = np.matmul(np.matmul(K,R1),np.hstack([np.identity(3), np.vstack(-C1)]))
 
+    p_old = np.hstack([np.squeeze(p_old),np.ones((p_old.shape[0],1))])
+    p_new = np.hstack([np.squeeze(p_new),np.ones((p_new.shape[0],1))])
     
+    # plotCoordinates(np.hstack([p_old,p_new]))
+    pnts1 = (p_new - C1)
+    pnts2 = (p_new - C2)
+    pnts3 = (p_new - C3)
+    pnts4 = (p_new - C4)
+
+    depth1 = np.matmul(R1[2,:],pnts1.T)
+    depth2 = np.matmul(R2[2,:],pnts2.T)
+    depth3 = np.matmul(R3[2,:],pnts3.T)
+    depth4 = np.matmul(R4[2,:],pnts4.T)
     
-    
-    P1 = np.matmul(np.matmul(K,R1),np.hstack([np.identity(3), np.vstack(-C1)]))
-    P2 = np.matmul(np.matmul(K,R2),np.hstack([np.identity(3), np.vstack(-C2)]))
-    P3 = np.matmul(np.matmul(K,R3),np.hstack([np.identity(3), np.vstack(-C3)]))
-    P4 = np.matmul(np.matmul(K,R4),np.hstack([np.identity(3), np.vstack(-C4)]))
-    print(P1)
-    
+    print(np.sum((depth1)))
+    print(np.sum((depth2)))
+    print(np.sum((depth3)))
+    print(np.sum((depth4)))
+
+
