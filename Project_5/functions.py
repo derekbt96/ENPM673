@@ -79,7 +79,7 @@ def RansacFundamental(points_f1, points_f2):
     best_F = np.zeros((3,3))
 
     # threshold for model convergence 
-    thresh = 0.001
+    thresh = .1
     # Number of points selected for a given iteration (8-point algo)
     it_points = 8
     # total number of iterations for which ransac should run
@@ -95,20 +95,27 @@ def RansacFundamental(points_f1, points_f2):
         epipolar_constraint = np.sum(np.multiply(points_f2, 
             np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
 
+        # print(np.mean(abs(epipolar_constraint)))
         current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
-
+        # print(current_inliers)
         if (current_inliers > max_inliers):
             best_F = nF
             max_inliers = current_inliers
 
-    error = np.sum(np.multiply(points_f2, 
-            np.transpose(np.matmul(best_F, np.transpose(points_f1)))), 1)
+
+    # print(max_inliers,points_f1.shape[0])
+
+    error = np.sum(np.multiply(points_f2, np.transpose(np.matmul(best_F, np.transpose(points_f1)))), 1)
     indices = np.argsort(abs(error))
 
     # Pick out the least erroneous k inliers
-    k = 30
-    inliers_f1 = points_f1[indices[:k]] 
-    inliers_f2 = points_f2[indices[:k]]
+    # k = 30
+    # inliers_f1 = points_f1[indices[:k]] 
+    # inliers_f2 = points_f2[indices[:k]]
+
+    inliers_f1 = points_f1
+    inliers_f2 = points_f2
+
 
     return best_F, inliers_f1, inliers_f2
 
@@ -166,8 +173,10 @@ def EpipolarLines(img_f1, points_f1, img_f2, points_f2, F):
     
     return img_f1, img_f2
         
+
 def plotCoordinates(pnts):
     plt.figure(figsize=(6,6))
+    print(pnts.shape)
     num_set = int(pnts.shape[1]/2)
     print(num_set)
     for i in range(num_set):
@@ -188,36 +197,50 @@ def getCameraPose(F,K,p_old,p_new):
     
     # Get Camera Pose
     W = np.array([[0,-1,0],[1,0,0],[0,0,1]])
-
+    
+    # print(U)
     C1 = U[:,2]
     C2 = -U[:,2]
     C3 = U[:,2]
     C4 = -U[:,2]
 
+    
     R1 = np.matmul(np.matmul(U,W),V.T)
     R2 = np.matmul(np.matmul(U,W),V.T)
     R3 = np.matmul(np.matmul(U,W.T),V.T)
     R4 = np.matmul(np.matmul(U,W.T),V.T)
     
+    print(R1)
+    print(R2)
+    print(R3)
+    print(R4)
+    
+    return U[:,2],R3
+
     # P1 = np.matmul(np.matmul(K,R1),np.hstack([np.identity(3), np.vstack(-C1)]))
 
     p_old = np.hstack([np.squeeze(p_old),np.ones((p_old.shape[0],1))])
     p_new = np.hstack([np.squeeze(p_new),np.ones((p_new.shape[0],1))])
     
-    # plotCoordinates(np.hstack([p_old,p_new]))
-    pnts1 = (p_new - C1)
-    pnts2 = (p_new - C2)
-    pnts3 = (p_new - C3)
-    pnts4 = (p_new - C4)
+    Kinv = np.linalg.inv(K)
 
-    depth1 = np.matmul(R1[2,:],pnts1.T)
-    depth2 = np.matmul(R2[2,:],pnts2.T)
-    depth3 = np.matmul(R3[2,:],pnts3.T)
-    depth4 = np.matmul(R4[2,:],pnts4.T)
+    x_old = np.matmul(Kinv,p_old.T)
+    x_new = np.matmul(Kinv,p_new.T)
     
-    print(np.sum((depth1)))
-    print(np.sum((depth2)))
-    print(np.sum((depth3)))
-    print(np.sum((depth4)))
 
+    # pnts1 = (x_new.T - C1)
+    # pnts2 = (x_new.T - C2)
+    # pnts3 = (x_new.T - C3)
+    # pnts4 = (x_new.T - C4)
+
+    # depth1 = np.matmul(R1[2,:],pnts1.T)
+    # depth2 = np.matmul(R2[2,:],pnts2.T)
+    # depth3 = np.matmul(R3[2,:],pnts3.T)
+    # depth4 = np.matmul(R4[2,:],pnts4.T)
+    
+    # print([np.sum(np.mean(depth1)),np.sum(np.mean(depth2)),np.sum(np.mean(depth3)),np.sum(np.mean(depth4))])
+    print(C1[0],np.mean(depth1))
+    print(C2[0],np.mean(depth2))
+    print(C3[0],np.mean(depth3))
+    print(C4[0],np.mean(depth4))
 

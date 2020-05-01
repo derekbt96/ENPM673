@@ -1,5 +1,7 @@
 import cv2
-import numpy as np 
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt 
 from ReadCameraModel import ReadCameraModel
 from UndistortImage import UndistortImage
 import os
@@ -10,7 +12,7 @@ fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
 K = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]])
 
 # iterate over all images
-it = 1
+it = -20
 img1 = 0
 img_orig1 = 0
 
@@ -18,9 +20,14 @@ orb_kp1 = None
 orb_des1 = None
 
 # Initialize Orb detector and BF matcher
-orb = cv2.ORB_create(nfeatures=400)
+orb = cv2.ORB_create(nfeatures=400,patchSize=51)
+# print(orb.patchSize)
+# orb = cv2.SIFT_create(nfeatures=400)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
             
+current_pnt = np.zeros((3,1))
+current_R = np.identity(3)
+all_points = np.zeros((1,3))
 
 for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
     files.sort()
@@ -28,6 +35,10 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
         filepath = subdir + os.sep + file
 
         if filepath.endswith(".jpg") or filepath.endswith(".pgm") or filepath.endswith(".png") or filepath.endswith(".ppm"):
+
+            if it < 1:
+                it += 1
+                continue
 
             # load image
             img = cv2.imread(filepath,0)
@@ -56,7 +67,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             # Feature matching: cv2.NORM_HAMMING for ORB
             matches = bf.match(des1, des2)
             matches = sorted(matches, key=lambda x: x.distance)
-            matches = matches[:50] # draw first 50 matches
+            # matches = matches[:50] # draw first 50 matches
             match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
             
             img1 = img2 
@@ -77,10 +88,23 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
             
             # Compute essential matrix
-            getCameraPose(F, K, points_f1, points_f2)
+            t,R = getCameraPose(F, K, points_f1, points_f2)
 
-            break
+
+            # Log camera movement
+            current_R = np.matmul(R,current_R)
+            current_pnt = np.hstack(current_pnt) + np.matmul(current_R,t)
+            all_points = np.vstack([all_points,current_pnt])
+       
+
+            # break
             cv2.imshow('Epipolar lines', img_f1)
             # cv2.imshow('Epipolar lines', match_img)
-            if cv2.waitKey(-1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+
+
+plt.figure(figsize=(6,6))
+plt.plot(all_points[:,0], all_points[:,2])
+plt.grid(True)
+plt.show()
