@@ -5,14 +5,14 @@ import matplotlib.pyplot as plt
 from ReadCameraModel import ReadCameraModel
 from UndistortImage import UndistortImage
 import os
-from functions import RansacFundamental, EpipolarLines, getCameraPose, Linear,checkCheirality 
+from functions import RansacFundamental, EpipolarLines, getCameraPose, Linear,checkCheirality, camera_pose
 dirpath = os.getcwd()
 
 fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
 K = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]])
 
 # iterate over all images
-it = -20
+it = -80
 img1 = 0
 img_orig1 = 0
 
@@ -25,9 +25,7 @@ orb = cv2.ORB_create(nfeatures=400,patchSize=51)
 # orb = cv2.SIFT_create(nfeatures=400)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
             
-current_pnt = np.zeros((3,1))
-current_R = np.identity(3)
-all_points = np.zeros((1,3))
+pose = camera_pose()
 
 for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
     files.sort()
@@ -90,8 +88,9 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             F, inliers_f1, inliers_f2 = RansacFundamental(points_f1, points_f2)
             
             # draw epipolar lines
-            img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
+            # img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
             
+
             # These are the possible transforms between frame1 (f1) and frame2 (f2)
             T = getCameraPose(F, K, points_f1, points_f2)
             # X: 4 sets of 3D points (from triangulation) from 4 camera poses
@@ -115,25 +114,17 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             # print(t_final)
             # print(np.shape(X_final))
 
+
             # Log camera movement
             # Calculate pose of the camera relative to the first camera pose
-            # This essentially is Visual Odometry!
-            ############
-            # NEED TO DO THIS NOW!! :'(
-            ############ 
-            # current_R = np.matmul(R,current_R)
-            # current_pnt = np.hstack(current_pnt) + np.matmul(current_R,t)
-            # all_points = np.vstack([all_points,current_pnt])
-       
+            pose.update(R_final, t_final, X_final)
+            
 
             # break
+            cv2.imshow('img', img)
             # cv2.imshow('Epipolar lines', img_f1)
-            # # cv2.imshow('Epipolar lines', match_img)
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
+            # cv2.imshow('Epipolar lines', match_img)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-
-plt.figure(figsize=(6,6))
-plt.plot(all_points[:,0], all_points[:,2])
-plt.grid(True)
-plt.show()
+pose.plot()
