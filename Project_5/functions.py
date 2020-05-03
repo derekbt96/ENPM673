@@ -68,12 +68,12 @@ def RansacFundamental(points_f1, points_f2):
 
     l = len(points_f2)
     
-    points_f1 = np.reshape(points_f1[:,0], (l,2))
-    points_f2 = np.reshape(points_f2[:,0], (l,2))
+    # points_f1 = np.reshape(points_f1[:,0], (l,2))
+    # points_f2 = np.reshape(points_f2[:,0], (l,2))
 
-    # Change to homogeneous coordinates
-    points_f1 = np.hstack((points_f1, np.ones((l,1))))
-    points_f2 = np.hstack((points_f2, np.ones((l,1))))
+    # # Change to homogeneous coordinates
+    # points_f1 = np.hstack((points_f1, np.ones((l,1))))
+    # points_f2 = np.hstack((points_f2, np.ones((l,1))))
     
     # Initialize Fundamental matrix 
     best_F = np.zeros((3,3))
@@ -85,7 +85,6 @@ def RansacFundamental(points_f1, points_f2):
     # total number of iterations for which ransac should run
     total_it = 1000
     max_inliers = 0
-    min_error = 1000000
 
     for it in range(total_it):
         # print(it)
@@ -93,22 +92,15 @@ def RansacFundamental(points_f1, points_f2):
 
         nF = NormalizedFundamental(points_f1[rand_index], points_f2[rand_index])
         
-        epipolar_constraint = np.sum(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
-        current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
+        epipolar_constraint = np.sum(np.multiply(points_f2, 
+            np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
 
+        # print(np.mean(abs(epipolar_constraint)))
+        current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
+        # print(current_inliers)
         if (current_inliers > max_inliers):
             best_F = nF
             max_inliers = current_inliers
-            # print(max_inliers)
-
-
-        # epipolar = np.sum(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
-        # mean_error = np.mean(abs(epipolar))
-        # if (mean_error < min_error):
-        #     best_F = nF
-        #     min_error = mean_error
-        #     inliers = epipolar[abs(epipolar) < thresh]
-        #     print(len(inliers),points_f1.shape[0])
 
 
     # print(max_inliers,points_f1.shape[0])
@@ -117,12 +109,12 @@ def RansacFundamental(points_f1, points_f2):
     indices = np.argsort(abs(error))
 
     # Pick out the least erroneous k inliers
-    k = 30
+    # k = 30
+    # inliers_f1 = points_f1[indices[:k]] 
+    # inliers_f2 = points_f2[indices[:k]]
 
-    inliers_f1 = points_f1[indices[:k]]
-    inliers_f2 = points_f2[indices[:k]]
-    # inliers_f1 = points_f1
-    # inliers_f2 = points_f2
+    inliers_f1 = points_f1
+    inliers_f2 = points_f2
 
 
     return best_F, inliers_f1, inliers_f2
@@ -192,30 +184,7 @@ def plotCoordinates(pnts):
     plt.grid(True)
     plt.show()
 
-
-
-class camera_movement():
-    def __init__(self):
-        
-        self.pos = np.zeros((3,1))
-        self.R = np.identity(3)
-        self.X_log = np.zeros((1,3))
-        
-
-    def update_pos(self,r,t):
-        self.R = np.matmul(r,self.R)
-        self.pos = np.hstack(self.pos) + np.matmul(self.R,t)
-        self.X_log = np.vstack([self.X_log,self.pos])
-        
-
-    def plot(self):
-        plt.figure(figsize=(6,6))
-        plt.plot([self.X_log][:,0], self.X_log[:,2])
-        plt.grid(True)
-        plt.show()
-
-
-
+# Pose from Epipolar geometry
 def getCameraPose(F,K,p_old,p_new):
 
     # Get essential matrix
@@ -223,52 +192,124 @@ def getCameraPose(F,K,p_old,p_new):
     
     U, S, V = np.linalg.svd(E)
     temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
+    # Since we can only estimate E upto a scale, 
+    # we can always rescale it so that the SVD of E 
+    # has the form as given below
     E = np.matmul(np.matmul(U,temp),V.T)
     
     # Get Camera Pose
     W = np.array([[0,-1,0],[1,0,0],[0,0,1]])
     
-    # print(U)
-    C1 = U[:,2]
-    C2 = -U[:,2]
-    C3 = U[:,2]
-    C4 = -U[:,2]
+    # You can recover the relative pose of the camera
+    # between the two frames from the essential matrix
+    # up to a scale of t.
+    #
+    # Upto the scale of t, there are 4 theoretical soln.
+    # but only one for which the scene point will be in 
+    # in front of the camera: This constraint is termed 
+    # as the Cheirality constraint which allows you to 
+    # find a unique camera pose 
+    # t is (+ or - lambda) U[:,2] 
     
+    
+    # This is the camera center (translation vector)
+    t1 = U[:,2].reshape(3,1)
+    t2 = -U[:,2].reshape(3,1)
+
+    # This is the rotation matrix
     R1 = np.matmul(np.matmul(U,W),V.T)
-    R2 = np.matmul(np.matmul(U,W),V.T)
-    R3 = np.matmul(np.matmul(U,W.T),V.T)
-    R4 = np.matmul(np.matmul(U,W.T),V.T)
+    R2 = np.matmul(np.matmul(U,W.T),V.T)
     
-    # print(R1)
-    # print(R2)
-    # print(R3)
-    # print(R4)
+    # To store transform matrices
+    T = np.zeros((4,3,4))
     
-    return U[:,2],R3
+    # So the 4 candidate poses are:
+    T[0,:,:] = np.hstack((R1, t1))
+    T[1,:,:] = np.hstack((R1, t2))
+    T[2,:,:] = np.hstack((R2, t1))
+    T[3,:,:] = np.hstack((R2, t2))
 
-    # P1 = np.matmul(np.matmul(K,R1),np.hstack([np.identity(3), np.vstack(-C1)]))
+    for i in range(4):
+        if (np.linalg.det(T[i,:,:3]) < 0):
+            T[i,:,:] = -T[i,:,:]
 
-    p_old = np.hstack([np.squeeze(p_old),np.ones((p_old.shape[0],1))])
-    p_new = np.hstack([np.squeeze(p_new),np.ones((p_new.shape[0],1))])
-    
-    Kinv = np.linalg.inv(K)
+    return T
 
-    x_old = np.matmul(Kinv,p_old.T)
-    x_new = np.matmul(Kinv,p_new.T)
+#     Triangulation:
+#     # Linear Solution
+#     '''
+#     Generally, the rays joining the camera centres and the 3D world point
+#     do not intersect due to noise. Therefore triangulation can be solved via
+#     SVD, finding a least squares solution to a system of equations
+#     '''
+def Linear(K, T1, T2, points_f1, points_f2):
     
-    # pnts1 = (x_new.T - C1)
-    # pnts2 = (x_new.T - C2)
-    # pnts3 = (x_new.T - C3)
-    # pnts4 = (x_new.T - C4)
+    # Projection Matrix P = KR[I|C]
+    P1 = np.matmul( np.matmul(K, T1[:,:3]), 
+        np.hstack((np.identity(3), -T1[:,3].reshape(3,1))) )
+    P2 = np.matmul( np.matmul(K, T2[:,:3]), 
+        np.hstack((np.identity(3), -T2[:,3].reshape(3,1))) )
+    
+    l = len(points_f1)
+    # 3d world point
+    X = np.zeros((l,3))
 
-    # depth1 = np.matmul(R1[2,:],pnts1.T)
-    # depth2 = np.matmul(R2[2,:],pnts2.T)
-    # depth3 = np.matmul(R3[2,:],pnts3.T)
-    # depth4 = np.matmul(R4[2,:],pnts4.T)
+    for i in range(l):
+        x, y, z = points_f1[i,:]
+        x_, y_, z_ = points_f2[i,:]
+
+        x_f1_mat = np.array([[0,-z,y],[z,0,-x],[-y,x,0]])
+        x_f2_mat = np.array([[0,-z_,y_],[z_,0,-x_],[-y_,x_,0]])
+        
+        A = np.vstack((np.matmul(x_f1_mat,P1), np.matmul(x_f2_mat,P2)))
+        
+        U,S,V = np.linalg.svd(A)
+
+        X_homo = V[:,-1]/V[-1,-1]
+        X[i,:] = X_homo[:3].reshape(1,3)
+        
+    return X
+
+def checkCheirality(T, X):
+
+    max_points = 0
+    R = T[:,:,:3] # 4x3x3
+    t = T[:,:,3] # 4x3
+    R_final = None
+    t_final = None
+    X_final = None
+
+    for i in range(4):
+
+        l = len(X[i,:,:])
+        # print("i {}, l {}".format(i,l))
+        num_points = 0
     
-    # print([np.sum(np.mean(depth1)),np.sum(np.mean(depth2)),np.sum(np.mean(depth3)),np.sum(np.mean(depth4))])
-    # print(C1[0],np.mean(depth1))
-    # print(C2[0],np.mean(depth2))
-    # print(C3[0],np.mean(depth3))
-    # print(C4[0],np.mean(depth4))
+        for j in range(l):
+            # checkCheirality condition
+            if (np.matmul( R[i,2,:].reshape(1,3), \
+                (X[i,j,:].reshape(3,1)-t[i,:].reshape(3,1)) ) > 0 and \
+                X[i,j,2] >=0): \
+
+                # Count the num of points satisfying this condition
+                '''
+                The best camera configuration is the one that produces the maximum number 
+                of points satisfying the cheirality condition.
+                '''
+                num_points += 1
+
+        if (num_points > max_points):
+            max_points = num_points
+            R_final = T[i,:,:3]
+            t_final = T[i,:,3]
+            X_final = X[i,:,:]
+
+    return R_final, t_final, X_final
+
+
+
+
+
+        
+
 
