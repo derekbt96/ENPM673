@@ -89,7 +89,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             
             # draw epipolar lines
             # img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
-            
+
 
             # These are the possible transforms between frame1 (f1) and frame2 (f2)
             T = getCameraPose(F, K, points_f1, points_f2)
@@ -121,9 +121,10 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             
 
             # break
-            cv2.imshow('img', img)
+            # cv2.imshow('img', img)
             # cv2.imshow('Epipolar lines', img_f1)
-            # cv2.imshow('Epipolar lines', match_img)
+            match_img = cv2.resize(match_img, (1000, 400), interpolation = cv2.INTER_AREA)
+            cv2.imshow('Epipolar lines', match_img)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 

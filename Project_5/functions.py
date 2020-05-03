@@ -120,6 +120,9 @@ def RansacFundamental(points_f1, points_f2):
 	inliers_f1 = points_f1
 	inliers_f2 = points_f2
 
+	# print(np.linalg.det(best_F))
+	# print(best_F)
+
 
 	return best_F, inliers_f1, inliers_f2
 
@@ -220,6 +223,15 @@ def plotCoordinates(pnts):
 	plt.show()
 
 
+def plotCoordinates3D(pnts):
+	plt.figure(figsize=(6,6))
+	ax = plt.axes(projection='3d')
+	ax.scatter3D(pnts[:,0], pnts[:,1], pnts[:,2])
+	ax.scatter3D(0, 0, 0, 'r',)
+	
+	plt.show()
+
+
 # Pose from Epipolar geometry
 def getCameraPose(F,K,p_old,p_new):
 
@@ -304,7 +316,8 @@ def Linear(K, T1, T2, points_f1, points_f2):
 
 		X_homo = V[:,-1]/V[-1,-1]
 		X[i,:] = X_homo[:3].reshape(1,3)
-		
+	
+	# plotCoordinates3D(X)
 	return X
 
 
@@ -333,7 +346,7 @@ def checkCheirality(T, X):
 		# 		The best camera configuration is the one that produces the maximum number 
 		# 		of points satisfying the cheirality condition.
 		# 		'''
-				
+		
 		
 		num_points = np.sum(np.sign(np.matmul(R[i,2,:].reshape(1,3), np.transpose(X[i,:,:]-t[i,:]))))
 		num_points_all[0,i] = num_points
