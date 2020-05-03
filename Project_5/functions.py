@@ -85,6 +85,7 @@ def RansacFundamental(points_f1, points_f2):
     # total number of iterations for which ransac should run
     total_it = 1000
     max_inliers = 0
+    min_error = 1000000
 
     for it in range(total_it):
         # print(it)
@@ -92,15 +93,22 @@ def RansacFundamental(points_f1, points_f2):
 
         nF = NormalizedFundamental(points_f1[rand_index], points_f2[rand_index])
         
-        epipolar_constraint = np.sum(np.multiply(points_f2, 
-            np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
-
-        # print(np.mean(abs(epipolar_constraint)))
+        epipolar_constraint = np.sum(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
         current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
-        # print(current_inliers)
+
         if (current_inliers > max_inliers):
             best_F = nF
             max_inliers = current_inliers
+            # print(max_inliers)
+
+
+        # epipolar = np.sum(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
+        # mean_error = np.mean(abs(epipolar))
+        # if (mean_error < min_error):
+        #     best_F = nF
+        #     min_error = mean_error
+        #     inliers = epipolar[abs(epipolar) < thresh]
+        #     print(len(inliers),points_f1.shape[0])
 
 
     # print(max_inliers,points_f1.shape[0])
@@ -109,12 +117,12 @@ def RansacFundamental(points_f1, points_f2):
     indices = np.argsort(abs(error))
 
     # Pick out the least erroneous k inliers
-    # k = 30
-    # inliers_f1 = points_f1[indices[:k]] 
-    # inliers_f2 = points_f2[indices[:k]]
+    k = 30
 
-    inliers_f1 = points_f1
-    inliers_f2 = points_f2
+    inliers_f1 = points_f1[indices[:k]]
+    inliers_f2 = points_f2[indices[:k]]
+    # inliers_f1 = points_f1
+    # inliers_f2 = points_f2
 
 
     return best_F, inliers_f1, inliers_f2
@@ -186,6 +194,28 @@ def plotCoordinates(pnts):
 
 
 
+class camera_movement():
+    def __init__(self):
+        
+        self.pos = np.zeros((3,1))
+        self.R = np.identity(3)
+        self.X_log = np.zeros((1,3))
+        
+
+    def update_pos(self,r,t):
+        self.R = np.matmul(r,self.R)
+        self.pos = np.hstack(self.pos) + np.matmul(self.R,t)
+        self.X_log = np.vstack([self.X_log,self.pos])
+        
+
+    def plot(self):
+        plt.figure(figsize=(6,6))
+        plt.plot([self.X_log][:,0], self.X_log[:,2])
+        plt.grid(True)
+        plt.show()
+
+
+
 def getCameraPose(F,K,p_old,p_new):
 
     # Get essential matrix
@@ -203,17 +233,16 @@ def getCameraPose(F,K,p_old,p_new):
     C2 = -U[:,2]
     C3 = U[:,2]
     C4 = -U[:,2]
-
     
     R1 = np.matmul(np.matmul(U,W),V.T)
     R2 = np.matmul(np.matmul(U,W),V.T)
     R3 = np.matmul(np.matmul(U,W.T),V.T)
     R4 = np.matmul(np.matmul(U,W.T),V.T)
     
-    print(R1)
-    print(R2)
-    print(R3)
-    print(R4)
+    # print(R1)
+    # print(R2)
+    # print(R3)
+    # print(R4)
     
     return U[:,2],R3
 
@@ -227,7 +256,6 @@ def getCameraPose(F,K,p_old,p_new):
     x_old = np.matmul(Kinv,p_old.T)
     x_new = np.matmul(Kinv,p_new.T)
     
-
     # pnts1 = (x_new.T - C1)
     # pnts2 = (x_new.T - C2)
     # pnts3 = (x_new.T - C3)
@@ -239,8 +267,8 @@ def getCameraPose(F,K,p_old,p_new):
     # depth4 = np.matmul(R4[2,:],pnts4.T)
     
     # print([np.sum(np.mean(depth1)),np.sum(np.mean(depth2)),np.sum(np.mean(depth3)),np.sum(np.mean(depth4))])
-    print(C1[0],np.mean(depth1))
-    print(C2[0],np.mean(depth2))
-    print(C3[0],np.mean(depth3))
-    print(C4[0],np.mean(depth4))
+    # print(C1[0],np.mean(depth1))
+    # print(C2[0],np.mean(depth2))
+    # print(C3[0],np.mean(depth3))
+    # print(C4[0],np.mean(depth4))
 

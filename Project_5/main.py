@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from ReadCameraModel import ReadCameraModel
 from UndistortImage import UndistortImage
 import os
-from functions import RansacFundamental, EpipolarLines, getCameraPose
+from functions import RansacFundamental, EpipolarLines, getCameraPose, camera_movement
 dirpath = os.getcwd()
 
 fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
@@ -25,9 +25,7 @@ orb = cv2.ORB_create(nfeatures=400,patchSize=51)
 # orb = cv2.SIFT_create(nfeatures=400)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
             
-current_pnt = np.zeros((3,1))
-current_R = np.identity(3)
-all_points = np.zeros((1,3))
+pose = camera_movement()
 
 for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
     files.sort()
@@ -90,12 +88,9 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             # Compute essential matrix
             t,R = getCameraPose(F, K, points_f1, points_f2)
 
-
             # Log camera movement
-            current_R = np.matmul(R,current_R)
-            current_pnt = np.hstack(current_pnt) + np.matmul(current_R,t)
-            all_points = np.vstack([all_points,current_pnt])
-       
+            pose.update_pos(R,t)
+            
 
             # break
             cv2.imshow('Epipolar lines', img_f1)
@@ -104,7 +99,4 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
                 break
 
 
-plt.figure(figsize=(6,6))
-plt.plot(all_points[:,0], all_points[:,2])
-plt.grid(True)
-plt.show()
+# pose.plot()
