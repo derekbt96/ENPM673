@@ -144,41 +144,44 @@ def EpipolarLines(img_f1, points_f1, img_f2, points_f2, F):
 	img_f2 = cv2.UMat(img_f2)
 
 	for it in range(len(points_f1)):
-		# epipolar line in the left image 
-		l = np.matmul(F, np.reshape(points_f1[it,:],(3,1)))
-		# epipolar line in the right image
-		l_ = np.matmul(F.T, np.reshape(points_f2[it,:],(3,1)))
+		try:
+			# epipolar line in the left image 
+			l = np.matmul(F, np.reshape(points_f1[it,:],(3,1)))
 
-		f1_p1 = np.cross(l.flatten(), line_left)
-		f1_p2 = np.cross(l.flatten(), line_right)
-		f1_p1 /= f1_p1[2]
-		f1_p2 /= f1_p2[2]
+			# epipolar line in the right image
+			l_ = np.matmul(F.T, np.reshape(points_f2[it,:],(3,1)))
 
-		f2_p1 = np.cross(l_.flatten(), line_left)
-		f2_p2 = np.cross(l_.flatten(), line_right)
-		f2_p1 /= f2_p1[2]
-		f2_p2 /= f2_p2[2]
+			f1_p1 = np.cross(l.flatten(), line_left)
+			f1_p2 = np.cross(l.flatten(), line_right)
+			f1_p1 /= f1_p1[2]
+			f1_p2 /= f1_p2[2]
 
-		img_f1 = cv2.line(
-			img_f1, 
-			(int(f1_p1[0]), int(f1_p1[1])), 
-			(int(f1_p2[0]), int(f1_p2[1])), 
-			(0,0,255), 
-			1) 
-		img_f1 = cv2.circle(img_f1, 
-			(int(points_f1[it,0]), int(points_f1[it,1])), 
-			3, (255,0,0), 2) 
+			f2_p1 = np.cross(l_.flatten(), line_left)
+			f2_p2 = np.cross(l_.flatten(), line_right)
+			f2_p1 /= f2_p1[2]
+			f2_p2 /= f2_p2[2]
 
-		img_f2 = cv2.line(
-			img_f2, 
-			(int(f2_p1[0]), int(f2_p1[1])), 
-			(int(f2_p2[0]), int(f2_p2[1])), 
-			(0,0,255), 
-			1) 
-		img_f2 = cv2.circle(img_f2, 
-			(int(points_f2[it,0]), int(points_f2[it,1])), 
-			3, (255,0,0), 2) 
-	
+			img_f1 = cv2.line(
+				img_f1, 
+				(int(f1_p1[0]), int(f1_p1[1])), 
+				(int(f1_p2[0]), int(f1_p2[1])), 
+				(0,0,255), 
+				1) 
+			img_f1 = cv2.circle(img_f1, 
+				(int(points_f1[it,0]), int(points_f1[it,1])), 
+				3, (255,0,0), 2) 
+
+			img_f2 = cv2.line(
+				img_f2, 
+				(int(f2_p1[0]), int(f2_p1[1])), 
+				(int(f2_p2[0]), int(f2_p2[1])), 
+				(0,0,255), 
+				1) 
+			img_f2 = cv2.circle(img_f2, 
+				(int(points_f2[it,0]), int(points_f2[it,1])), 
+				3, (255,0,0), 2) 
+		except:
+			pass
 	return img_f1, img_f2
 
 
@@ -192,15 +195,15 @@ class camera_pose():
 
 	def update(self,r,t,x):
 		
-		# self.R = np.matmul(r,self.R)
+		self.R = np.matmul(r,self.R)
 		# print(self.R)
 		self.pos = np.hstack(self.pos) + np.matmul(self.R,t)
 		self.X_log = np.vstack([self.X_log,self.pos])
 		
 
-	def plot(self):
+	def plot3D(self):
 		
-		print(self.X_log.shape)
+		# print(self.X_log.shape)
 		# print(self.X_log)
 		# print(self.X_log[:,0])
 		
@@ -209,6 +212,18 @@ class camera_pose():
 		ax.plot3D(self.X_log[:,0], self.X_log[:,1], self.X_log[:,2])
 		# plt.plot(self.X_log[:,0], self.X_log[:,2])
 		# plt.grid(True)
+		plt.show()
+
+	def plot(self):
+		
+		# print(self.X_log.shape)
+		# print(self.X_log)
+		# print(self.X_log[:,0])
+		
+		plt.figure(figsize=(6,6))
+		plt.plot(self.X_log[:,0], self.X_log[:,2])
+		plt.grid(True)
+		plt.axis('equal')
 		plt.show()
 
 
@@ -236,7 +251,7 @@ def plotCoordinates3D(pnts):
 def getCameraPose(F,K,p_old,p_new):
 
 	# Get essential matrix
-	E = np.matmul(np.matmul(K.T,F),K)
+	E = np.matmul(K.T,np.matmul(F,K))
 	
 	U, S, V = np.linalg.svd(E)
 	temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
@@ -245,7 +260,11 @@ def getCameraPose(F,K,p_old,p_new):
 	# we can always rescale it so that the SVD of E 
 	# has the form as given below
 	E = np.matmul(np.matmul(U,temp),V.T)
-	
+	# print('Our E: ',E)
+
+	E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
+	# print('Opencv E: ',E)
+
 	# Get Camera Pose
 	W = np.array([[0,-1,0],[1,0,0],[0,0,1]])
 	
@@ -268,7 +287,14 @@ def getCameraPose(F,K,p_old,p_new):
 	# This is the rotation matrix
 	R1 = np.matmul(np.matmul(U,W),V.T)
 	R2 = np.matmul(np.matmul(U,W.T),V.T)
+
+
+	# r = Rotation.from_matrix(R1)
+	# print(r.as_euler('zyx', degrees=True))
+	# r = Rotation.from_matrix(R2)
+	# print(r.as_euler('zyx', degrees=True))
 	
+
 	# To store transform matrices
 	T = np.zeros((4,3,4))
 	
@@ -363,12 +389,32 @@ def checkCheirality(T, X):
 			X_final = X[i,:,:]
 
 			
-	# print(num_points_all)
 
+
+	# print(num_points_all)
+	if t[0,2] > 0:
+		t_final = T[0,:,3]
+	elif t[1,2] > 0:
+		t_final = T[1,:,3]
+	elif t[2,2] > 0:
+		t_final = T[2,:,3]
+	else:
+		t_final = T[3,:,3]
+
+
+	# if R[0,0,0] > 0:
+	# 	R_final = T[0,:,:3]
+	# elif R[1,0,0] > 0:
+	# 	R_final = T[1,:,:3]
+	# elif R[2,0,0] > 0:
+	# 	R_final = T[2,:,:3]
+	# else:
+	# 	R_final = T[3,:,:3]
 
 	r = Rotation.from_matrix(R_final)
-
 	print(r.as_euler('zyx', degrees=True))
+
+
 
 
 	return R_final, t_final, X_final

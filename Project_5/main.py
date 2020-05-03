@@ -37,7 +37,11 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             if it < 1:
                 it += 1
                 continue
-
+            elif it > 50:
+                it += 1
+                break
+            print('Iteration: ',it)
+                
             # load image
             img = cv2.imread(filepath,0)
             img = cv2.cvtColor(img, cv2.COLOR_BayerGR2BGR)
@@ -86,10 +90,13 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             points_f2 = np.hstack((points_f2, np.ones((l,1))))
 
             F, inliers_f1, inliers_f2 = RansacFundamental(points_f1, points_f2)
-            
-            # draw epipolar lines
-            # img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
+            # inliers_f1 = np.int32(points_f1)
+            # inliers_f2 = np.int32(points_f2)
+            # F, mask = cv2.findFundamentalMat(inliers_f1,inliers_f2,cv2.FM_LMEDS)
 
+
+            # draw epipolar lines
+            img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
 
             # These are the possible transforms between frame1 (f1) and frame2 (f2)
             T = getCameraPose(F, K, points_f1, points_f2)
@@ -122,10 +129,10 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
 
             # break
             # cv2.imshow('img', img)
-            # cv2.imshow('Epipolar lines', img_f1)
-            match_img = cv2.resize(match_img, (1000, 400), interpolation = cv2.INTER_AREA)
-            cv2.imshow('Epipolar lines', match_img)
+            cv2.imshow('Epipolar lines', img_f1)
+            # match_img = cv2.resize(match_img, (1000, 400), interpolation = cv2.INTER_AREA)
+            # cv2.imshow('Epipolar lines', match_img)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-pose.plot()
+# pose.plot()
