@@ -12,7 +12,7 @@ fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
 K = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]])
 
 # iterate over all images
-it = -750
+it = -100
 img1 = 0
 img_orig1 = 0
 
@@ -21,9 +21,8 @@ orb_des1 = None
 
 # Initialize Orb detector and BF matcher
 orb = cv2.ORB_create(nfeatures=500,patchSize=51)
-# print(orb.patchSize)
-# orb = cv2.SIFT_create(nfeatures=400)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+np.random.seed(0)
             
 pose = camera_pose()
 
@@ -37,7 +36,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             if it < 1:
                 it += 1
                 continue
-            elif it > 100:
+            elif it > 300:
                 it += 1
                 break
             print('Iteration: ',it)
@@ -59,7 +58,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             img2 = img
             img_orig2 = img_orig 
 
-
+            # continue
             # find orb features 
             kp1 = orb_kp1
             des1 = orb_des1
@@ -70,7 +69,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             matches = bf.match(des1, des2)
             matches = sorted(matches, key=lambda x: x.distance)
             matches = matches[:(int(.5*len(matches)))] # draw first 50 matches
-            # match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
+            match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
             
             img1 = img2 
             img_orig1 = img_orig2
@@ -80,19 +79,20 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             points_f1 = np.float32([ kp1[m.queryIdx].pt for m in matches ]).reshape(-1,1,2)
             points_f2 = np.float32([ kp2[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
 
-
             # Change to homogeneous coordinates
             l = len(points_f2)
             points_f1 = np.hstack((np.squeeze(points_f1), np.ones((l,1))))
             points_f2 = np.hstack((np.squeeze(points_f2), np.ones((l,1))))
 
+
+            
             # Calculate Fundemental Matrix
             F, inliers_f1, inliers_f2 = RansacFundamental(points_f1, points_f2)
             # inliers_f1 = np.int32(points_f1)
             # inliers_f2 = np.int32(points_f2)
             # F, mask = cv2.findFundamentalMat(inliers_f1,inliers_f2,cv2.FM_LMEDS)
 
-
+            
             # draw epipolar lines
             # img_f1, img_f2 = EpipolarLines(img_orig1, inliers_f1, img_orig2, inliers_f2, F)
 
@@ -112,21 +112,20 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
 
             # Final transform and points in front of camera
             R_final, t_final, X_final = checkCheirality(T, X)
+            
 
-
-            # R_final, t_final = recoverPose(F, K, points_f1, points_f2)
+            # R_final, t_final = recoverPose(None, K, points_f1, points_f2)
 
 
             # Calculate pose of the camera relative to the first camera pose
             pose.update2D(R_final, t_final)
+            # print(t_final)
             # pose.update(R_final, t_final)
             
 
             # break
-            img = cv2.resize(img, (800, 600), interpolation = cv2.INTER_AREA)
-            cv2.imshow('img', img)
-            # cv2.imshow('Epipolar lines', img_f1)
-            # cv2.imshow('Epipolar lines', match_img)
+            result = cv2.resize(match_img, (800, 600), interpolation = cv2.INTER_AREA)
+            cv2.imshow('Img', result)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
