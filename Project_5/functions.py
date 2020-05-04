@@ -113,12 +113,12 @@ def RansacFundamental(points_f1, points_f2):
 	indices = np.argsort(abs(error))
 
 	# Pick out the least erroneous k inliers
-	# k = 30
-	# inliers_f1 = points_f1[indices[:k]] 
-	# inliers_f2 = points_f2[indices[:k]]
+	k = 30
+	inliers_f1 = points_f1[indices[:k]] 
+	inliers_f2 = points_f2[indices[:k]]
 
-	inliers_f1 = points_f1
-	inliers_f2 = points_f2
+	# inliers_f1 = points_f1
+	# inliers_f2 = points_f2
 
 	# print(np.linalg.det(best_F))
 	# print(best_F)
@@ -185,48 +185,6 @@ def EpipolarLines(img_f1, points_f1, img_f2, points_f2, F):
 	return img_f1, img_f2
 
 
-class camera_pose():
-	def __init__(self):
-		
-		self.pos = np.zeros((3,1))
-		self.R = np.identity(3)
-		self.X_log = np.zeros((1,3))
-		
-
-	def update(self,r,t,x):
-		
-		self.R = np.matmul(r,self.R)
-		# print(self.R)
-		self.pos = np.hstack(self.pos) + np.matmul(self.R,t)
-		self.X_log = np.vstack([self.X_log,self.pos])
-		
-
-	def plot3D(self):
-		
-		# print(self.X_log.shape)
-		# print(self.X_log)
-		# print(self.X_log[:,0])
-		
-		plt.figure(figsize=(6,6))
-		ax = plt.axes(projection='3d')
-		ax.plot3D(self.X_log[:,0], self.X_log[:,1], self.X_log[:,2])
-		# plt.plot(self.X_log[:,0], self.X_log[:,2])
-		# plt.grid(True)
-		plt.show()
-
-	def plot(self):
-		
-		# print(self.X_log.shape)
-		# print(self.X_log)
-		# print(self.X_log[:,0])
-		
-		plt.figure(figsize=(6,6))
-		plt.plot(self.X_log[:,0], self.X_log[:,2])
-		plt.grid(True)
-		plt.axis('equal')
-		plt.show()
-
-
 def plotCoordinates(pnts):
 	plt.figure(figsize=(6,6))
 	print(pnts.shape)
@@ -247,31 +205,117 @@ def plotCoordinates3D(pnts):
 	plt.show()
 
 
+class camera_pose():
+	def __init__(self):
+		
+		self.pos = np.zeros((3,1))
+		self.R = np.identity(3)
+		self.X_log = np.zeros((1,3))
+		
+
+	def update(self,r,t):
+		
+		self.pos = self.pos + np.matmul(self.R,np.vstack(t))
+		self.R = np.matmul(r,self.R)
+		self.X_log = np.vstack([self.X_log, np.hstack(self.pos)])
+		
+	def update2D(self,r,t):
+		rotat = Rotation.from_matrix(r)
+		dhdg = rotat.as_euler('yxz')[0]
+		# print(dhdg)
+
+		# t = np.array([0,0,1])
+		d_pos = np.matmul(self.R,np.vstack(t))
+		d_pos[1] = 0
+
+		d_R = np.array([[np.cos(dhdg),0,np.sin(dhdg)],[0,1,0],[-np.sin(dhdg),0,np.cos(dhdg)]])
+		
+		self.pos = self.pos + d_pos
+		self.R = np.matmul(d_R,self.R)
+		self.X_log = np.vstack([self.X_log, np.hstack(self.pos)])
+		
+
+	def plot3D(self):
+		
+
+		plt.figure(figsize=(6,6))
+		ax = plt.axes(projection='3d')
+		ax.plot3D(self.X_log[:,0], self.X_log[:,1], self.X_log[:,2])
+		# plt.plot(self.X_log[:,0], self.X_log[:,2])
+		# plt.grid(True)
+		plt.show()
+
+	def plot(self):
+		
+		# print(self.X_log.shape)
+		# print(self.X_log)
+		# print(self.X_log[:,0])
+		
+		# plt.figure(figsize=(6,6))
+		plt.subplot(211)
+		plt.plot(self.X_log[:,2], self.X_log[:,0])
+		plt.scatter(self.X_log[:,2], self.X_log[:,0])
+		plt.grid(True)
+		plt.axis('equal')
+
+		plt.subplot(212)
+		plt.plot(self.X_log[:,2], self.X_log[:,1])
+		plt.scatter(self.X_log[:,2], self.X_log[:,1])
+		
+		plt.grid(True)
+		plt.axis('equal')
+
+
+		plt.show()
+
+
+def recoverPose(F,K,p_old,p_new):
+
+	# Get essential matrix
+	# F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
+
+
+	E = np.matmul(K.T,np.matmul(F,K))
+	U, S, V = np.linalg.svd(E)
+	temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
+	E = np.matmul(np.matmul(U,temp),V)
+	# E = E/np.linalg.norm(E)
+
+
+
+	# E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
+
+	points, R, t, mask = cv2.recoverPose(E, p_old[:,:2], p_new[:,:2])
+	# print(R)
+	# print(t)
+	return R,t
+
+
 # Pose from Epipolar geometry
 def getCameraPose(F,K,p_old,p_new):
 
+
+
+	
+
+	F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
+
 	# Get essential matrix
 	E = np.matmul(K.T,np.matmul(F,K))
-	
 	U, S, V = np.linalg.svd(E)
 	temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
-
-	# Since we can only estimate E upto a scale, 
-	# we can always rescale it so that the SVD of E 
-	# has the form as given below
-	E = np.matmul(np.matmul(U,temp),V.T)
-	# print('Our E: ',E)
-
-	E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
-	# print('Opencv E: ',E)
+	E = np.matmul(U,np.matmul(temp,V))
+	
+	# E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
 
 	# Get Camera Pose
 	W = np.array([[0,-1,0],[1,0,0],[0,0,1]])
-	
+	U, S, V = np.linalg.svd(E)
+
 	# You can recover the relative pose of the camera
 	# between the two frames from the essential matrix
 	# up to a scale of t.
-	#
+
 	# Upto the scale of t, there are 4 theoretical soln.
 	# but only one for which the scene point will be in 
 	# in front of the camera: This constraint is termed 
@@ -285,15 +329,9 @@ def getCameraPose(F,K,p_old,p_new):
 	t2 = -U[:,2].reshape(3,1)
 
 	# This is the rotation matrix
-	R1 = np.matmul(np.matmul(U,W),V.T)
-	R2 = np.matmul(np.matmul(U,W.T),V.T)
+	R1 = np.matmul(np.matmul(U,W),V)
+	R2 = np.matmul(np.matmul(U,W.T),V)
 
-
-	# r = Rotation.from_matrix(R1)
-	# print(r.as_euler('zyx', degrees=True))
-	# r = Rotation.from_matrix(R2)
-	# print(r.as_euler('zyx', degrees=True))
-	
 
 	# To store transform matrices
 	T = np.zeros((4,3,4))
@@ -306,19 +344,43 @@ def getCameraPose(F,K,p_old,p_new):
 
 	for i in range(4):
 		if (np.linalg.det(T[i,:,:3]) < 0):
+			# print(np.linalg.det(T[i,:,:3]))
 			T[i,:,:] = -T[i,:,:]
+
+	# print(T[1,:,:])
+
+	points, R, t, mask = cv2.recoverPose(E, p_old[:,:2], p_new[:,:2])	
+	
+	yaw_rec = (Rotation.from_matrix(R)).as_euler('yzx', degrees=True)
+	yaw_1 = (Rotation.from_matrix(T[1,:,:3])).as_euler('yzx', degrees=True)
+	yaw_2 = (Rotation.from_matrix(T[2,:,:3])).as_euler('yzx', degrees=True)
+	# print(yaw_rec)
+	# print(yaw_1)
+	# print(yaw_2)
+	if not (np.allclose(yaw_rec,yaw_1) or np.allclose(yaw_rec,yaw_2)):
+		print(R)
+		print(T[1,:,:])
+		print(T[2,:,:])
+
+	if not (np.allclose(np.hstack(t),T[0,:,3]) or np.allclose(np.hstack(t),T[1,:,3])):
+		print(t)
+		print(T[0,:,3])
+		print(T[1,:,3])
+
+	# print(T)
+	# print(R,t)
 
 	return T
 
-#     Triangulation:
-#     # Linear Solution
-#     '''
-#     Generally, the rays joining the camera centres and the 3D world point
-#     do not intersect due to noise. Therefore triangulation can be solved via
-#     SVD, finding a least squares solution to a system of equations
-#     '''
+
 def Linear(K, T1, T2, points_f1, points_f2):
-	
+	# Triangulation:
+	# Linear Solution
+	'''
+	Generally, the rays joining the camera centres and the 3D world point
+	do not intersect due to noise. Therefore triangulation can be solved via
+	SVD, finding a least squares solution to a system of equations
+	'''
 	# Projection Matrix P = KR[I|C]
 	P1 = np.matmul( np.matmul(K, T1[:,:3]), 
 		np.hstack((np.identity(3), -T1[:,3].reshape(3,1))) )
@@ -392,14 +454,15 @@ def checkCheirality(T, X):
 
 
 	# print(num_points_all)
-	if t[0,2] > 0:
-		t_final = T[0,:,3]
-	elif t[1,2] > 0:
-		t_final = T[1,:,3]
-	elif t[2,2] > 0:
-		t_final = T[2,:,3]
-	else:
-		t_final = T[3,:,3]
+
+	# if t[0,2] > 0:
+	# 	t_final = T[0,:,3]
+	# elif t[1,2] > 0:
+	# 	t_final = T[1,:,3]
+	# elif t[2,2] > 0:
+	# 	t_final = T[2,:,3]
+	# else:
+	# 	t_final = T[3,:,3]
 
 
 	# if R[0,0,0] > 0:
@@ -411,8 +474,8 @@ def checkCheirality(T, X):
 	# else:
 	# 	R_final = T[3,:,:3]
 
-	r = Rotation.from_matrix(R_final)
-	print(r.as_euler('zyx', degrees=True))
+	# r = Rotation.from_matrix(R_final)
+	# print(r.as_euler('xyz', degrees=True))
 
 
 
