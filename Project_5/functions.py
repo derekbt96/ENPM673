@@ -20,7 +20,7 @@ def Fundamental(points_f1, points_f2):
 	# enforce rank 2 condition
 	S[2,2] = 0
 	# recalculate Fundamental matrix
-	F = np.matmul(np.matmul(U, S), np.transpose(V)) 
+	F = np.matmul(np.matmul(U, S), np.transpose(V))
 
 	return F
 
@@ -87,8 +87,11 @@ def RansacFundamental(points_f1, points_f2):
 	# Number of points selected for a given iteration (8-point algo)
 	it_points = 8
 	# total number of iterations for which ransac should run
-	total_it = 1000
+	total_it = 5000
+	thresh_error = .17
 	max_inliers = 0
+	mean_error = 1000
+
 
 	for it in range(total_it):
 		# print(it)
@@ -99,14 +102,20 @@ def RansacFundamental(points_f1, points_f2):
 		epipolar_constraint = np.sum(np.multiply(points_f2, 
 			np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
 
-		# print(np.mean(abs(epipolar_constraint)))
-		current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
-		# print(current_inliers)
-		if (current_inliers > max_inliers):
+		
+		# current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
+		# if (current_inliers > max_inliers):
+		# 	best_F = nF
+		# 	max_inliers = current_inliers
+
+		temp_error = np.mean(abs(epipolar_constraint))
+		if (temp_error < mean_error):
 			best_F = nF
-			max_inliers = current_inliers
+			mean_error = temp_error
+			if mean_error < thresh_error:
+				break
 
-
+	print(mean_error)
 	# print(max_inliers,points_f1.shape[0])
 
 	error = np.sum(np.multiply(points_f2, np.transpose(np.matmul(best_F, np.transpose(points_f1)))), 1)
@@ -222,7 +231,7 @@ class camera_pose():
 	def update2D(self,r,t):
 		rotat = Rotation.from_matrix(r)
 		dhdg = rotat.as_euler('yxz')[0]
-		# print(dhdg)
+		print(dhdg)
 
 		# t = np.array([0,0,1])
 		d_pos = np.matmul(self.R,np.vstack(t))
@@ -251,19 +260,18 @@ class camera_pose():
 		# print(self.X_log)
 		# print(self.X_log[:,0])
 		
-		# plt.figure(figsize=(6,6))
-		plt.subplot(211)
+		plt.figure(figsize=(6,6))
+		# plt.subplot(211)
 		plt.plot(self.X_log[:,2], self.X_log[:,0])
 		plt.scatter(self.X_log[:,2], self.X_log[:,0])
 		plt.grid(True)
 		plt.axis('equal')
 
-		plt.subplot(212)
-		plt.plot(self.X_log[:,2], self.X_log[:,1])
-		plt.scatter(self.X_log[:,2], self.X_log[:,1])
-		
-		plt.grid(True)
-		plt.axis('equal')
+		# plt.subplot(212)
+		# plt.plot(self.X_log[:,2], self.X_log[:,1])
+		# plt.scatter(self.X_log[:,2], self.X_log[:,1])
+		# plt.grid(True)
+		# plt.axis('equal')
 
 
 		plt.show()
@@ -298,7 +306,7 @@ def getCameraPose(F,K,p_old,p_new):
 
 	
 
-	F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
+	# F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
 
 	# Get essential matrix
 	E = np.matmul(K.T,np.matmul(F,K))
@@ -474,8 +482,8 @@ def checkCheirality(T, X):
 	# else:
 	# 	R_final = T[3,:,:3]
 
-	# r = Rotation.from_matrix(R_final)
-	# print(r.as_euler('xyz', degrees=True))
+	r = Rotation.from_matrix(R_final)
+	print(r.as_euler('xyz', degrees=True))
 
 
 

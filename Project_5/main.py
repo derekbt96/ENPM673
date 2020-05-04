@@ -20,7 +20,7 @@ orb_kp1 = None
 orb_des1 = None
 
 # Initialize Orb detector and BF matcher
-orb = cv2.ORB_create(nfeatures=400,patchSize=51)
+orb = cv2.ORB_create(nfeatures=500,patchSize=51)
 # print(orb.patchSize)
 # orb = cv2.SIFT_create(nfeatures=400)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -69,7 +69,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             # Feature matching: cv2.NORM_HAMMING for ORB
             matches = bf.match(des1, des2)
             matches = sorted(matches, key=lambda x: x.distance)
-            # matches = matches[:50] # draw first 50 matches
+            matches = matches[:(int(.5*len(matches)))] # draw first 50 matches
             # match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
             
             img1 = img2 
@@ -114,7 +114,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             R_final, t_final, X_final = checkCheirality(T, X)
 
 
-            R_final, t_final = recoverPose(F, K, points_f1, points_f2)
+            # R_final, t_final = recoverPose(F, K, points_f1, points_f2)
 
 
             # Calculate pose of the camera relative to the first camera pose
