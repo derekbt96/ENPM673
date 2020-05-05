@@ -18,7 +18,7 @@ def EstimateFundamentalMatrix(p1, p2):
 					[p1[7,0]*p2[7,0], 	p1[7,0]*p2[7,1], 	p1[7,0], 	p1[7,1]*p2[7,0], 	p1[7,1]*p2[7,1], 	p1[7,1], 	p2[7,0], 	p2[7,1], 1]])
 	# print(A)
 	U, S, Vh = np.linalg.svd(A)
-	V = Vh[-1,:]/np.linalg.norm(Vh[-1,:])
+	V = Vh[-1,:] #/np.linalg.norm(Vh[-1,:])
 	F = np.reshape(V, (3,3))
 
 
@@ -51,8 +51,6 @@ def Fundamental(points_f1, points_f2):
     F = np.matmul(np.matmul(U, S), V) 
 
     return F
-
-
 
 
 
@@ -146,7 +144,7 @@ def RansacFundamental(points_f1, points_f2):
 	best_F = np.zeros((3,3))
 	l = len(points_f2)
 	# threshold for model convergence 
-	thresh = .3
+	thresh = .2
 	
 	# Number of points selected for a given iteration (8-point algo)
 	it_points = 8
@@ -157,51 +155,38 @@ def RansacFundamental(points_f1, points_f2):
 	
 
 
-	for it in range(total_it):
-		# print(it)
+	for ite in range(total_it):
+
 		rand_index = np.random.choice(l, it_points, replace=True)
 
-		nF = NormalizedFundamental(points_f1[rand_index], points_f2[rand_index])
-		# nF = nF / nF[2,2]
-		epipolar_constraint = np.linalg.norm(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), axis=1)
+		nF = EstimateFundamentalMatrix(points_f1[rand_index], points_f2[rand_index])
 
-		# print(np.linalg.norm(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), axis=1))
-		# raise 'stop'
+		error = np.abs(np.diag(np.matmul(np.matmul(points_f2, nF), points_f1.T)))
+		inds = np.where(error < thresh)
 
-		current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
-		if (current_inliers > max_inliers):
+		if len(inds[0]) > max_inliers:
+			
+			max_inliers = len(inds[0])
 			best_F = nF
-			max_inliers = current_inliers
-			if max_inliers >= .7*l:
-				break
 
 
 	# print(mean_error)
 	print(max_inliers,points_f1.shape[0])
 
-	error = np.sum(np.multiply(points_f2, np.transpose(np.matmul(best_F, np.transpose(points_f1)))), 1)
-	indices = np.argsort(abs(error))
+	# error = np.sum(np.multiply(points_f2, np.transpose(np.matmul(best_F, np.transpose(points_f1)))), 1)
+	# indices = np.argsort(abs(error))
 
 
-
-	# inliers_f1 = np.int32(points_f1)
-	# inliers_f2 = np.int32(points_f2)
+	inliers_f1 = np.int32(points_f1)
+	inliers_f2 = np.int32(points_f2)
 	# best_F, mask = cv2.findFundamentalMat(inliers_f1,inliers_f2,cv2.FM_LMEDS)
 
-	# print(F)
-	# print(best_F)
-	# raise 'stop'
 
 	# Pick out the least erroneous k inliers
-	k = 30
-	inliers_f1 = points_f1[indices[:k]] 
-	inliers_f2 = points_f2[indices[:k]]
+	# k = 30
+	# inliers_f1 = points_f1[indices[:k]] 
+	# inliers_f2 = points_f2[indices[:k]]
 
-	# inliers_f1 = points_f1
-	# inliers_f2 = points_f2
-
-	# print(np.linalg.det(best_F))
-	# print(best_F)
 
 
 	return best_F, inliers_f1, inliers_f2
@@ -263,26 +248,6 @@ def EpipolarLines(img_f1, points_f1, img_f2, points_f2, F):
 		except:
 			pass
 	return img_f1, img_f2
-
-
-def plotCoordinates(pnts):
-	plt.figure(figsize=(6,6))
-	print(pnts.shape)
-	num_set = int(pnts.shape[1]/2)
-	print(num_set)
-	for i in range(num_set):
-		plt.scatter(pnts[:,2*i], pnts[:,2*i+1])#,s=.6)
-	plt.grid(True)
-	plt.show()
-
-
-def plotCoordinates3D(pnts):
-	plt.figure(figsize=(6,6))
-	ax = plt.axes(projection='3d')
-	ax.scatter3D(pnts[:,0], pnts[:,1], pnts[:,2])
-	ax.scatter3D(0, 0, 0, 'r',)
-	
-	plt.show()
 
 
 class camera_pose():
@@ -352,46 +317,29 @@ class camera_pose():
 
 def recoverPose(F,K,p_old,p_new):
 
-	# Get essential matrix
-	# F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
-
-
-	# E = np.matmul(K.T,np.matmul(F,K))
-	# U, S, V = np.linalg.svd(E)
-	# temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
-	# E = np.matmul(np.matmul(U,temp),V)
-	# E = E/np.linalg.norm(E)
-
-
-	
 	E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
 
 	points, R, t, mask = cv2.recoverPose(E, p_old[:,:2], p_new[:,:2])
 	# print(R)
 	# print(t)
+	
 	return R,t
 
 
 # Pose from Epipolar geometry
 def getCameraPose(F,K,p_old,p_new):
 
-
-
-	
-
 	# F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
 
 	# Get essential matrix
 	E = np.matmul(np.transpose(K),np.matmul(F,K))
-	# print(np.linalg.matrix_rank(E))
-	# U, S, V = np.linalg.svd(E)
-	# temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
-	# E = np.matmul(U,np.matmul(temp,V))
-	# E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
+
+
+	E,mask = cv2.findEssentialMat(p_old[:,:2], p_new[:,:2],K)
 
 	# Get Camera Pose
 	W = np.array([[0,-1,0],[1,0,0],[0,0,1]])
-	U, S, V = np.linalg.svd(E)
+	U, S, V = np.linalg.svd(E, full_matrices=True)
 	
 	# You can recover the relative pose of the camera
 	# between the two frames from the essential matrix
@@ -428,29 +376,8 @@ def getCameraPose(F,K,p_old,p_new):
 			# print(np.linalg.det(T[i,:,:3]))
 			T[i,:,:3] = -T[i,:,:3]
 
-	# print(T[1,:,:])
-
-	# points, R, t, mask = cv2.recoverPose(E, p_old[:,:2], p_new[:,:2])	
 	
-	# yaw_rec = (Rotation.from_matrix(R)).as_euler('yzx', degrees=True)
-	# yaw_1 = (Rotation.from_matrix(T[1,:,:3])).as_euler('yzx', degrees=True)
-	# yaw_2 = (Rotation.from_matrix(T[2,:,:3])).as_euler('yzx', degrees=True)
-	# # print(yaw_rec)
-	# # print(yaw_1)
-	# # print(yaw_2)
-	# if not (np.allclose(yaw_rec,yaw_1) or np.allclose(yaw_rec,yaw_2)):
-	# 	print(R)
-	# 	print(T[1,:,:])
-	# 	print(T[2,:,:])
-
-	# if not (np.allclose(np.hstack(t),T[0,:,3]) or np.allclose(np.hstack(t),T[1,:,3])):
-	# 	print(t)
-	# 	print(T[0,:,3])
-	# 	print(T[1,:,3])
-
-	# print(T)
-	# print(R,t)
-
+	
 	return T
 
 

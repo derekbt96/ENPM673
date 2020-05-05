@@ -10,9 +10,17 @@ dirpath = os.getcwd()
 
 fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
 K = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]])
-# print(K)
+
+
+
+Initial_frame = 750
+total_frames_run = -1
+
+
+
+
 # iterate over all images
-it = -750
+it = -Initial_frame
 img1 = 0
 img_orig1 = 0
 
@@ -22,7 +30,7 @@ orb_des1 = None
 # Initialize Orb detector and BF matcher
 orb = cv2.ORB_create(nfeatures=500)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-np.random.seed(1)
+np.random.seed(0)
             
 pose = camera_pose()
 
@@ -41,7 +49,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             #     it += 1
             #     continue
 
-            elif it > 150:
+            elif it > 700:
                 it += 1
                 break
             print('Iteration: ',it)
@@ -119,7 +127,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             R_final, t_final, X_final = checkCheirality(T, X)
             
 
-            # R_final, t_final = recoverPose(None, K, points_f1, points_f2)
+            R_final, t_final = recoverPose(None, K, points_f1, points_f2)
 
 
             # Calculate pose of the camera relative to the first camera pose
