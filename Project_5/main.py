@@ -41,7 +41,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             #     it += 1
             #     continue
 
-            elif it > 140:
+            elif it > 150:
                 it += 1
                 break
             print('Iteration: ',it)
@@ -73,9 +73,7 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             # Feature matching: cv2.NORM_HAMMING for ORB
             matches = bf.match(des1, des2)
             matches = sorted(matches, key=lambda x: x.distance)
-            print(matches.distance)
-            raise 'stop'
-            matches = matches[:(int(.75*len(matches)))] # draw first 50 matches
+            matches = matches[:(int(.8*len(matches)))] # draw first 50 matches
             # match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
             
             img1 = img2 

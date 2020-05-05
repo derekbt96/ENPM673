@@ -34,108 +34,25 @@ def EstimateFundamentalMatrix(p1, p2):
 
 def Fundamental(points_f1, points_f2):
 
-	A1 = np.multiply(points_f1, np.tile(points_f1[:,0],(3,1)).T)
-	A2 = np.multiply(points_f1, np.tile(points_f1[:,1],(3,1)).T)
-	A3 = points_f2
-	A = np.hstack([A1, A2, A3])
-	# print(A)
-	U, S, V = np.linalg.svd(A)
-	V_temp = V[-1,:]/np.linalg.norm(V[-1,:])
-	F = np.reshape(V_temp, (3,3))
-	
-	U, S, V = np.linalg.svd(F)
-	S = np.diag(S)
-	# enforce rank 2 condition
-	S[2,2] = 0
-	# recalculate Fundamental matrix
-	F = np.matmul(np.matmul(U, S), V)
+    A1 = np.multiply(points_f1, np.tile(points_f2[:,0],(3,1)).T)
+    A2 = np.multiply(points_f1, np.tile(points_f2[:,1],(3,1)).T)
+    A3 = points_f1
+    A = np.hstack((np.hstack((A1, A2)), A3))
 
-	return F
+    U, S, V = np.linalg.svd(A)
+    
+    F = np.reshape(np.transpose(V)[:,-1], (3,3))
+    
+    U, S, V = np.linalg.svd(F)
+    S = np.diag(S)
+    # enforce rank 2 condition
+    S[2,2] = 0
+    # recalculate Fundamental matrix
+    F = np.matmul(np.matmul(U, S), V) 
 
-
-def fundamental_matrix(feat_1,feat_2):
-
-	A = np.zeros((8,9))
-
-	for k in range(len(feat_1)):
-		x1 = feat_1[k][0]
-		x2 = feat_2[k][0]
-		y1 = feat_1[k][1]
-		y2 = feat_2[k][1]
-		A[k] = np.array([x1*x2,x2*y1,x2,y2*x1,y1*y2,y2,x1,y1,1])
-	U,S,V = np.linalg.svd(A)
-	V = np.transpose(V)
-	V = V[:,-1]
-	F = np.reshape(V,(3,3))
-	U_F, S_F, V_F = np.linalg.svd(F)
-	S_F[-1] = 0
-	S_new = np.zeros((3,3))
-	for i in range(3):
-		S_new[i,i]=S_F[i]
-	F_new = np.matmul(np.matmul(U_F,S_new),V_F)
-	F_new = F_new/F_new[2,2]
-
-	#NORMALZIED PART
-	all_x_1 = 0
-	all_x_2 = 0
-	all_y_1 = 0
-	all_y_2 = 0
-
-	for point_1 in feat_1:
-		all_x_1+=point_1[0]
-		all_y_1+=point_1[1]
-
-	for point2 in feat_2:
-		all_x_2+=point2[0]
-		all_y_2+=point2[1]
-
-	centr_1 = ((all_x_1/len(feat_1)),(all_y_1/len(feat_1)))
-	centr_2 = ((all_x_2/len(feat_2)),(all_y_2/len(feat_2)))
-
-	points_feat_1 = []
-	points_feat_2 = []
-
-	for point in feat_1:
-		x = point[0] - centr_1[0]
-		y = point[1] - centr_1[1]
-		point_new = (x,y)
-		points_feat_1.append(point_new)
-
-	for point in feat_2:
-		x = point[0] - centr_2[0]
-		y = point[1] - centr_2[1]
-		point_new = (x,y)
-		points_feat_2.append(point_new)
-
-	den = 0
-
-	for point in points_feat_1:
-		den += ((point[0])**-2+ (point[1])**-2)
-	den = np.sqrt((1/len(points_feat_1)) * den)
-
-	s = np.sqrt(2)/ den
-
-	den2 = 0
-
-	for point in points_feat_2:
-		den2 += ((point[0])**-2+ (point[1])**-2)
-	den2 = np.sqrt((1/len(points_feat_2)) * den2)
-
-	s_prime = np.sqrt(2)/ den2
-
-	T1 = np.matmul(np.array([[s,0,0],[0,s,0],[0,0,1]]),np.array([[1,0,-(all_x_1/len(feat_1))],[0,1,-(all_y_1/len(feat_1))],[0,0,1]]))
-	T2 = np.matmul(np.array([[s_prime, 0, 0], [0, s_prime, 0], [0, 0, 1]]),
-				   np.array([[1, 0, -(all_x_2 / len(feat_2))], [0, 1, -(all_y_2 / len(feat_2))], [0, 0, 1]]))
+    return F
 
 
-	F_normalized = np.matmul(np.matmul(T2.T,F_new),T1)
-
-	F_normalized  = F_normalized/F_normalized[2,2]
-
-
-
-
-	return F_normalized
 
 
 
@@ -176,7 +93,7 @@ def NormalizedFundamental(points_f1, points_f2):
 
 	F_norm = EstimateFundamentalMatrix(Normalized_f1, Normalized_f2)
 	# print(F_norm)
-	# F_norm_og = Fundamental(Normalized_f1, Normalized_f2)
+	# F_norm = Fundamental(Normalized_f1, Normalized_f2)
 	# print(F_norm_og)
 	# print(F_norm - F_norm_og)
 	nF = np.matmul(np.matmul(np.transpose(T2), F_norm), T1)
@@ -229,7 +146,7 @@ def RansacFundamental(points_f1, points_f2):
 	best_F = np.zeros((3,3))
 	l = len(points_f2)
 	# threshold for model convergence 
-	thresh = .25
+	thresh = .3
 	
 	# Number of points selected for a given iteration (8-point algo)
 	it_points = 8
@@ -255,7 +172,7 @@ def RansacFundamental(points_f1, points_f2):
 		if (current_inliers > max_inliers):
 			best_F = nF
 			max_inliers = current_inliers
-			if max_inliers >= .5*l:
+			if max_inliers >= .7*l:
 				break
 
 
@@ -267,9 +184,9 @@ def RansacFundamental(points_f1, points_f2):
 
 
 
-	inliers_f1 = np.int32(points_f1)
-	inliers_f2 = np.int32(points_f2)
-	best_F, mask = cv2.findFundamentalMat(inliers_f1,inliers_f2,cv2.FM_LMEDS)
+	# inliers_f1 = np.int32(points_f1)
+	# inliers_f2 = np.int32(points_f2)
+	# best_F, mask = cv2.findFundamentalMat(inliers_f1,inliers_f2,cv2.FM_LMEDS)
 
 	# print(F)
 	# print(best_F)
