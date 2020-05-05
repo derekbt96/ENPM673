@@ -12,6 +12,6 @@ from functions import RansacFundamental, EpipolarLines, getCameraPose, Linear,ch
 pose = camera_pose()
 
 
-pose.X_log = np.load('logs/straight_opencv.npy')
+pose.X_log = np.load('logs/straight_ransac.npy')
 
 pose.plot()

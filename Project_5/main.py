@@ -10,9 +10,9 @@ dirpath = os.getcwd()
 
 fx ,fy ,cx ,cy ,G_camera_image, LUT = ReadCameraModel('./model')
 K = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]])
-
+# print(K)
 # iterate over all images
-it = -100
+it = -750
 img1 = 0
 img_orig1 = 0
 
@@ -20,9 +20,9 @@ orb_kp1 = None
 orb_des1 = None
 
 # Initialize Orb detector and BF matcher
-orb = cv2.ORB_create(nfeatures=500,patchSize=51)
+orb = cv2.ORB_create(nfeatures=500)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-np.random.seed(0)
+np.random.seed(1)
             
 pose = camera_pose()
 
@@ -36,7 +36,12 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             if it < 1:
                 it += 1
                 continue
-            elif it > 300:
+
+            # elif it > 5 and it % 2 != 0:
+            #     it += 1
+            #     continue
+
+            elif it > 140:
                 it += 1
                 break
             print('Iteration: ',it)
@@ -68,8 +73,10 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             # Feature matching: cv2.NORM_HAMMING for ORB
             matches = bf.match(des1, des2)
             matches = sorted(matches, key=lambda x: x.distance)
-            matches = matches[:(int(.5*len(matches)))] # draw first 50 matches
-            match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
+            print(matches.distance)
+            raise 'stop'
+            matches = matches[:(int(.75*len(matches)))] # draw first 50 matches
+            # match_img = cv2.drawMatches(img_orig1, kp1, img_orig2, kp2, matches, None)
             
             img1 = img2 
             img_orig1 = img_orig2
@@ -124,10 +131,11 @@ for subdir, dirs, files in os.walk(dirpath + '/stereo/centre'):
             
 
             # break
-            result = cv2.resize(match_img, (800, 600), interpolation = cv2.INTER_AREA)
+            result = cv2.resize(img, (800, 600), interpolation = cv2.INTER_AREA)
             cv2.imshow('Img', result)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
 pose.plot()
+pose.save_data('opencv_1000')
 # pose.plot3D()

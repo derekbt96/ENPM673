@@ -18,15 +18,16 @@ def EstimateFundamentalMatrix(p1, p2):
 					[p1[7,0]*p2[7,0], 	p1[7,0]*p2[7,1], 	p1[7,0], 	p1[7,1]*p2[7,0], 	p1[7,1]*p2[7,1], 	p1[7,1], 	p2[7,0], 	p2[7,1], 1]])
 	# print(A)
 	U, S, Vh = np.linalg.svd(A)
-	F = np.reshape(Vh[-1,:], (3, 3))
-	# F = np.reshape(Vh[:,-1], (3,3))
+	V = Vh[-1,:]/np.linalg.norm(Vh[-1,:])
+	F = np.reshape(V, (3,3))
+
 
 	U, S, V = np.linalg.svd(F)
 	S = np.diag(S)
 	# enforce rank 2 condition
 	S[2,2] = 0
 	# recalculate Fundamental matrix
-	F = np.matmul(np.matmul(U, S), np.transpose(V))
+	F = np.matmul(np.matmul(U, S), V)
 	
 	return F
 
@@ -39,16 +40,104 @@ def Fundamental(points_f1, points_f2):
 	A = np.hstack([A1, A2, A3])
 	# print(A)
 	U, S, V = np.linalg.svd(A)
-	F = np.reshape(V[:,-1], (3,3))
+	V_temp = V[-1,:]/np.linalg.norm(V[-1,:])
+	F = np.reshape(V_temp, (3,3))
 	
 	U, S, V = np.linalg.svd(F)
 	S = np.diag(S)
 	# enforce rank 2 condition
 	S[2,2] = 0
 	# recalculate Fundamental matrix
-	F = np.matmul(np.matmul(U, S), np.transpose(V))
+	F = np.matmul(np.matmul(U, S), V)
 
 	return F
+
+
+def fundamental_matrix(feat_1,feat_2):
+
+	A = np.zeros((8,9))
+
+	for k in range(len(feat_1)):
+		x1 = feat_1[k][0]
+		x2 = feat_2[k][0]
+		y1 = feat_1[k][1]
+		y2 = feat_2[k][1]
+		A[k] = np.array([x1*x2,x2*y1,x2,y2*x1,y1*y2,y2,x1,y1,1])
+	U,S,V = np.linalg.svd(A)
+	V = np.transpose(V)
+	V = V[:,-1]
+	F = np.reshape(V,(3,3))
+	U_F, S_F, V_F = np.linalg.svd(F)
+	S_F[-1] = 0
+	S_new = np.zeros((3,3))
+	for i in range(3):
+		S_new[i,i]=S_F[i]
+	F_new = np.matmul(np.matmul(U_F,S_new),V_F)
+	F_new = F_new/F_new[2,2]
+
+	#NORMALZIED PART
+	all_x_1 = 0
+	all_x_2 = 0
+	all_y_1 = 0
+	all_y_2 = 0
+
+	for point_1 in feat_1:
+		all_x_1+=point_1[0]
+		all_y_1+=point_1[1]
+
+	for point2 in feat_2:
+		all_x_2+=point2[0]
+		all_y_2+=point2[1]
+
+	centr_1 = ((all_x_1/len(feat_1)),(all_y_1/len(feat_1)))
+	centr_2 = ((all_x_2/len(feat_2)),(all_y_2/len(feat_2)))
+
+	points_feat_1 = []
+	points_feat_2 = []
+
+	for point in feat_1:
+		x = point[0] - centr_1[0]
+		y = point[1] - centr_1[1]
+		point_new = (x,y)
+		points_feat_1.append(point_new)
+
+	for point in feat_2:
+		x = point[0] - centr_2[0]
+		y = point[1] - centr_2[1]
+		point_new = (x,y)
+		points_feat_2.append(point_new)
+
+	den = 0
+
+	for point in points_feat_1:
+		den += ((point[0])**-2+ (point[1])**-2)
+	den = np.sqrt((1/len(points_feat_1)) * den)
+
+	s = np.sqrt(2)/ den
+
+	den2 = 0
+
+	for point in points_feat_2:
+		den2 += ((point[0])**-2+ (point[1])**-2)
+	den2 = np.sqrt((1/len(points_feat_2)) * den2)
+
+	s_prime = np.sqrt(2)/ den2
+
+	T1 = np.matmul(np.array([[s,0,0],[0,s,0],[0,0,1]]),np.array([[1,0,-(all_x_1/len(feat_1))],[0,1,-(all_y_1/len(feat_1))],[0,0,1]]))
+	T2 = np.matmul(np.array([[s_prime, 0, 0], [0, s_prime, 0], [0, 0, 1]]),
+				   np.array([[1, 0, -(all_x_2 / len(feat_2))], [0, 1, -(all_y_2 / len(feat_2))], [0, 0, 1]]))
+
+
+	F_normalized = np.matmul(np.matmul(T2.T,F_new),T1)
+
+	F_normalized  = F_normalized/F_normalized[2,2]
+
+
+
+
+	return F_normalized
+
+
 
 
 def NormalizedFundamental(points_f1, points_f2):
@@ -67,6 +156,7 @@ def NormalizedFundamental(points_f1, points_f2):
 	python while calculating variance divided it by n and not n-1
 	"""
 	
+	# '''
 	norm_1 = np.mean(np.linalg.norm(f1_centred[:,0:2],axis=1))
 	norm_2 = np.mean(np.linalg.norm(f2_centred[:,0:2],axis=1))
 	coef_1 = 2**.5 / norm_1
@@ -92,40 +182,41 @@ def NormalizedFundamental(points_f1, points_f2):
 	nF = np.matmul(np.matmul(np.transpose(T2), F_norm), T1)
 	# print(nF)
 	# raise "stop"
+	'''
 
-	# s_f1 = np.sqrt(np.var(f1_centred, axis=0)*(l/(l-1)))
-	# s_f2 = np.sqrt(np.var(f2_centred, axis=0)*(l/(l-1)))
-	# # Transformation matrix
-	# Ta = np.matmul([
-	# 	[1/s_f1[0], 0, 0], 
-	# 	[0, 1/s_f1[1], 0], 
-	# 	[0, 0, 1]],
+	s_f1 = np.sqrt(np.var(f1_centred, axis=0)*(l/(l-1)))
+	s_f2 = np.sqrt(np.var(f2_centred, axis=0)*(l/(l-1)))
+	# Transformation matrix
+	Ta = np.matmul([
+		[1/s_f1[0], 0, 0], 
+		[0, 1/s_f1[1], 0], 
+		[0, 0, 1]],
 
-	# 	[[1, 0, -centroid_f1[0]], 
-	# 	[0, 1, -centroid_f1[1]], 
-	# 	[0, 0, 1]])
+		[[1, 0, -centroid_f1[0]], 
+		[0, 1, -centroid_f1[1]], 
+		[0, 0, 1]])
 	
-	# Tb = np.matmul([
-	# 	[1/s_f2[0], 0, 0], 
-	# 	[0, 1/s_f2[1], 0], 
-	# 	[0, 0, 1]],
+	Tb = np.matmul([
+		[1/s_f2[0], 0, 0], 
+		[0, 1/s_f2[1], 0], 
+		[0, 0, 1]],
 
-	# 	[[1, 0, -centroid_f2[0]], 
-	# 	[0, 1, -centroid_f2[1]], 
-	# 	[0, 0, 1]])
-	# # Normalized points
-	# Normalized_f1 = np.matmul(Ta, points_f1.T).T
-	# Normalized_f2 = np.matmul(Tb, points_f2.T).T
+		[[1, 0, -centroid_f2[0]], 
+		[0, 1, -centroid_f2[1]], 
+		[0, 0, 1]])
+	# Normalized points
+	Normalized_f1 = np.matmul(Ta, points_f1.T).T
+	Normalized_f2 = np.matmul(Tb, points_f2.T).T
 
-	# F_norm = Fundamental(Normalized_f1, Normalized_f2)
-	# nF = np.matmul(np.matmul(np.transpose(Tb), F_norm), Ta)
-
+	F_norm = Fundamental(Normalized_f1, Normalized_f2)
+	nF = np.matmul(np.matmul(np.transpose(Tb), F_norm), Ta)
+	'''
 	return nF
 
 
 def RansacFundamental(points_f1, points_f2): 
 
-	l = len(points_f2)
+	
 	
 	# points_f1 = np.reshape(points_f1[:,0], (l,2))
 	# points_f2 = np.reshape(points_f2[:,0], (l,2))
@@ -136,16 +227,17 @@ def RansacFundamental(points_f1, points_f2):
 	
 	# Initialize Fundamental matrix 
 	best_F = np.zeros((3,3))
-
+	l = len(points_f2)
 	# threshold for model convergence 
-	thresh = .01
+	thresh = .25
+	
 	# Number of points selected for a given iteration (8-point algo)
-	it_points = 24
+	it_points = 8
 	# total number of iterations for which ransac should run
-	total_it = 100
-	thresh_error = .15
+	total_it = 1000
 	max_inliers = 0
-	mean_error = 1000
+	thresh_inliers = .5
+	
 
 
 	for it in range(total_it):
@@ -153,41 +245,34 @@ def RansacFundamental(points_f1, points_f2):
 		rand_index = np.random.choice(l, it_points, replace=True)
 
 		nF = NormalizedFundamental(points_f1[rand_index], points_f2[rand_index])
-		
-		epipolar_constraint = np.sum(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), 1)
+		# nF = nF / nF[2,2]
+		epipolar_constraint = np.linalg.norm(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), axis=1)
 
-		
+		# print(np.linalg.norm(np.multiply(points_f2, np.transpose(np.matmul(nF, np.transpose(points_f1)))), axis=1))
+		# raise 'stop'
+
 		current_inliers = len(np.where(abs(epipolar_constraint) < thresh)[0])
 		if (current_inliers > max_inliers):
 			best_F = nF
 			max_inliers = current_inliers
+			if max_inliers >= .5*l:
+				break
 
-		# temp_error = np.mean(abs(epipolar_constraint))
-		# if (temp_error < mean_error):
-		# 	best_F = nF
-		# 	mean_error = temp_error
-		# 	# print(mean_error)
-		# 	if mean_error < thresh_error:
-		# 		break
 
 	# print(mean_error)
 	print(max_inliers,points_f1.shape[0])
 
 	error = np.sum(np.multiply(points_f2, np.transpose(np.matmul(best_F, np.transpose(points_f1)))), 1)
 	indices = np.argsort(abs(error))
-	# print(np.mean(abs(error)))
 
-	# F,mask = cv2.findFundamentalMat(points_f1,points_f2,cv2.RANSAC, 1,0.999)
-	# error = np.sum(np.multiply(points_f2, np.transpose(np.matmul(F, np.transpose(points_f1)))), 1)
-	# print(np.mean(abs(error)))
-	
-	# print(best_F)
+
+
+	inliers_f1 = np.int32(points_f1)
+	inliers_f2 = np.int32(points_f2)
+	best_F, mask = cv2.findFundamentalMat(inliers_f1,inliers_f2,cv2.FM_LMEDS)
+
 	# print(F)
-
-	# print(np.linalg.norm(best_F))
-	# print(np.linalg.norm(F))
-
-
+	# print(best_F)
 	# raise 'stop'
 
 	# Pick out the least erroneous k inliers
@@ -303,7 +388,7 @@ class camera_pose():
 		# print(dhdg)
 
 		# t = np.array([0,0,1])
-		d_pos = np.matmul(self.R,np.vstack(t))
+		d_pos = np.matmul(self.R,np.vstack(-t))
 		d_pos[1] = 0
 
 		d_R = np.array([[np.cos(dhdg),0,np.sin(dhdg)],[0,1,0],[-np.sin(dhdg),0,np.cos(dhdg)]])
@@ -345,7 +430,7 @@ class camera_pose():
 		plt.show()
 
 	def save_data(self,name):
-		np.save(name,self.X_log)
+		np.save('logs/'+name+'.npy',self.X_log)
 
 
 def recoverPose(F,K,p_old,p_new):
@@ -380,7 +465,7 @@ def getCameraPose(F,K,p_old,p_new):
 	# F,mask = cv2.findFundamentalMat(p_old,p_new,cv2.RANSAC, 1,0.999)
 
 	# Get essential matrix
-	E = np.matmul(K.T,np.matmul(F,K))
+	E = np.matmul(np.transpose(K),np.matmul(F,K))
 	# print(np.linalg.matrix_rank(E))
 	# U, S, V = np.linalg.svd(E)
 	# temp = np.array([[1,0,0],[0,1,0],[0,0,0]])
@@ -428,23 +513,23 @@ def getCameraPose(F,K,p_old,p_new):
 
 	# print(T[1,:,:])
 
-	points, R, t, mask = cv2.recoverPose(E, p_old[:,:2], p_new[:,:2])	
+	# points, R, t, mask = cv2.recoverPose(E, p_old[:,:2], p_new[:,:2])	
 	
-	yaw_rec = (Rotation.from_matrix(R)).as_euler('yzx', degrees=True)
-	yaw_1 = (Rotation.from_matrix(T[1,:,:3])).as_euler('yzx', degrees=True)
-	yaw_2 = (Rotation.from_matrix(T[2,:,:3])).as_euler('yzx', degrees=True)
-	# print(yaw_rec)
-	# print(yaw_1)
-	# print(yaw_2)
-	if not (np.allclose(yaw_rec,yaw_1) or np.allclose(yaw_rec,yaw_2)):
-		print(R)
-		print(T[1,:,:])
-		print(T[2,:,:])
+	# yaw_rec = (Rotation.from_matrix(R)).as_euler('yzx', degrees=True)
+	# yaw_1 = (Rotation.from_matrix(T[1,:,:3])).as_euler('yzx', degrees=True)
+	# yaw_2 = (Rotation.from_matrix(T[2,:,:3])).as_euler('yzx', degrees=True)
+	# # print(yaw_rec)
+	# # print(yaw_1)
+	# # print(yaw_2)
+	# if not (np.allclose(yaw_rec,yaw_1) or np.allclose(yaw_rec,yaw_2)):
+	# 	print(R)
+	# 	print(T[1,:,:])
+	# 	print(T[2,:,:])
 
-	if not (np.allclose(np.hstack(t),T[0,:,3]) or np.allclose(np.hstack(t),T[1,:,3])):
-		print(t)
-		print(T[0,:,3])
-		print(T[1,:,3])
+	# if not (np.allclose(np.hstack(t),T[0,:,3]) or np.allclose(np.hstack(t),T[1,:,3])):
+	# 	print(t)
+	# 	print(T[0,:,3])
+	# 	print(T[1,:,3])
 
 	# print(T)
 	# print(R,t)
@@ -532,12 +617,13 @@ def checkCheirality(T, X):
 			
 
 
-	yaw = (Rotation.from_matrix(R_final)).as_euler('yxz', degrees=True)
-	if (yaw > 25).any():
-		print('Yaw: ',yaw,' t: ',t_final)
-		print((Rotation.from_matrix(T[0,:,:3])).as_euler('yxz', degrees=True))
-		print((Rotation.from_matrix(T[2,:,:3])).as_euler('yxz', degrees=True))
-		R_final = np.identity(3)
+	# yaw = (Rotation.from_matrix(R_final)).as_euler('yxz', degrees=True)
+	# print(yaw)
+	# if (yaw > 25).any():
+	# 	print('Yaw: ',yaw,' t: ',t_final)
+	# 	print((Rotation.from_matrix(T[0,:,:3])).as_euler('yxz', degrees=True))
+	# 	print((Rotation.from_matrix(T[2,:,:3])).as_euler('yxz', degrees=True))
+	# 	R_final = np.identity(3)
 	# if abs(t_final[0]) > abs(t_final[2]):
 	# 	print(T[0,:,3])
 	# 	print(T[1,:,3])
