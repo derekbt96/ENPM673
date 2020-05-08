@@ -10,3 +10,9 @@ Note: Reduce the batch size if CUDA runs out of memory.
 
 You will also require the cnn_finetune library to run the scripts here, along with torch and torchvision.
 This can be downloaded at https://github.com/creafz/pytorch-cnn-finetune.
+
+OR
+
+Run everything from this ipython notebook. https://colab.research.google.com/drive/1PuooK1lwENRkioPwJvB9uRl9DBc7zOLD
+
+Just create a copy of the cats and dogs zip file shared with us.
