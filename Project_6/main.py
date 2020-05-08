@@ -20,7 +20,6 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import warnings
 import math
 import sys
-from sklearn.metrics import r2_score
 
 import numpy as np
 import torchvision
@@ -72,11 +71,11 @@ if torch.cuda.is_available():
     use_gpu=1 
     print ("CUDA Available")
 
-epochs = 200
-lr = 0.01
+epochs = 2
+lr = 0.15
 
-batch_size = 64
-batch_size_test = 64
+batch_size = 16
+batch_size_test = 8
 epochs_num = epochs
 
 print ("Batch size is {0}".format(batch_size))
@@ -361,10 +360,12 @@ def train(epoch):
         #     sys.exit('Loss has gone to NaN. Doubling the batch size.')
             # restart_program()
 
-    tta = np.array(testtargetarr)
+        print((total_loss/total_size)*100)
+
+    tta = np.array(traintargetarr)
     tta = [val for sublist in traintargetarr for val in sublist]
     tta = np.array(tta)
-    # toa = np.array(testoutputarr)
+    toa = np.array(trainoutputarr)
     toa = [val for sublist in trainoutputarr for val in sublist]
     toa = np.array(toa)
     # print (tta.flatten(),toa.flatten())
@@ -377,7 +378,7 @@ def train(epoch):
 
     # print ("RSQtrain is {}".format(rsqtrain))
     trainlossarr.append((total_loss/total_size))
-    trainrsqarr.append(rsqtrain)
+    # trainrsqarr.append(rsqtrain)
     # if rsqtrain>rdeftrain:
     #     rdeftrain = rsqtrain
     #     # model_ft_best = copy.deepcopy(model_ft)
@@ -416,7 +417,7 @@ def test():
             # print ("Target type is {0}. \n Output type is {1}.".format(target.type,output.type))
             # print ("Target shape is {0}. \n Output shape is {1}.".format(target.shape,output.shape))
 
-            loss = criterion(output, target)
+            loss = criterion(output, target.squeeze())
 
             total_loss += loss.item()
 
@@ -433,7 +434,7 @@ def test():
     tta = np.array(testtargetarr)
     tta = [val for sublist in testtargetarr for val in sublist]
     tta = np.array(tta)
-    # toa = np.array(testoutputarr)
+    toa = np.array(testoutputarr)
     toa = [val for sublist in testoutputarr for val in sublist]
     toa = np.array(toa)
 
