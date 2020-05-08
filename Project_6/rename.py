@@ -20,13 +20,13 @@ def main():
 
                     if "cat" in filepath:
                         print("Filepath {} has cat".format(filepath))
-                        sss = "./train_cats/{0}.png".format(snc)
+                        sss = "./train_renamed/{0}.png".format(snc)
                         cv2.imwrite(sss,img)
                         snc = snc+1
 
                     elif "dog" in filepath:
                         print("Filepath {} has dog".format(filepath))
-                        sss = "./train_dogs/{0}.png".format(snd)
+                        sss = "./train_renamed/{0}.png".format(snd)
                         cv2.imwrite(sss,img)
                         snd = snd+1
 
